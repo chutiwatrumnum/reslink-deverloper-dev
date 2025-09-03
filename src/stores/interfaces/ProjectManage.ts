@@ -165,6 +165,7 @@ export type ProjectManagementUpdatePayload = {
   zipCode: string | number;
   road?: string;
   subStreet?: string;
+  timeZone?: string;
 };
 export interface ProjectFromDataType {
   projectTypeId?: number;
