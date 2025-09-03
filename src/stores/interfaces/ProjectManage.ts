@@ -122,23 +122,26 @@ export interface SubDistrictDataType {
 
 export type ProjectManagementCreatePayload = {
   name: string;
-  image: string;
-  logo: string;
+  image: string | null;
+  logo: string | null;
   active?: boolean;
-  lat: string | number;
-  long: string | number;
-  projectTypeId: string | number;
+  lat: string | number | undefined;
+  long: string | number | undefined;
+  projectTypeId?: string | number;
+  vmsUrl?: string;
+  vmsUsername?: string;
+  vmsPassword?: string;
   contactNumber: string;
   email: string;
   country: string;
-  timeZone: string;
   province: string;
   district: string;
   subdistrict: string;
-  road?: string;
-  subStreet?: string;
   address: string;
   zipCode: string | number;
+  road?: string;
+  subStreet?: string;
+  timeZone?: string;
 };
 
 export type ProjectManagementUpdatePayload = {
@@ -155,7 +158,6 @@ export type ProjectManagementUpdatePayload = {
   contactNumber: string;
   email: string;
   country: string;
-  timeZone: string;
   province: string;
   district: string;
   subdistrict: string;

@@ -30,24 +30,23 @@ export const postCreateProjectManagementMutation = () => {
       try {
         const endpoint = `/project/developer/dashboard`;
         const apiPayload = {
+          projectTypeId: payload.projectTypeId,
           name: payload.name,
           image: payload.image,
           logo: payload.logo,
-          active: payload.active ?? true,
-          lat: Number(payload.lat),
-          long: Number(payload.long),
-          projectTypeId: Number(payload.projectTypeId),
+          lat: payload.lat,
+          long: payload.long,
           contactNumber: payload.contactNumber,
           email: payload.email,
-          country: payload.country || "Thailand",
-          timeZone: payload.timeZone || "Asia/Bangkok",
+          country: payload.country,
           province: payload.province,
           district: payload.district,
           subdistrict: payload.subdistrict,
-          road: payload.road || "",
+          road: payload.road,
           subStreet: payload.subStreet || "",
           address: payload.address,
-          zipCode: payload.zipCode
+          zipCode: payload.zipCode,
+          timeZone: payload.timeZone
         };
         console.log("API Payload create project:", apiPayload);
 
@@ -95,24 +94,22 @@ export const useEditProjectManagementMutation = () => {
       try {
         const endpoint = `/project/${id}/developer/dashboard`;
         const apiPayload = {
+          projectTypeId: payload.projectTypeId?.toString(),
           name: payload.name,
           image: payload.image,
           logo: payload.logo,
-          active: payload.active ?? true,
-          lat: Number(payload.lat),
-          long: Number(payload.long),
-          projectTypeId: Number(payload.projectTypeId),
+          lat: payload.lat,
+          long: payload.long,
           contactNumber: payload.contactNumber,
           email: payload.email,
-          country: payload.country || "Thailand",
-          timeZone: payload.timeZone || "Asia/Bangkok",
+          country: payload.country,
           province: payload.province,
           district: payload.district,
           subdistrict: payload.subdistrict,
           road: payload.road || "",
           subStreet: payload.subStreet || "",
           address: payload.address,
-          zipCode: payload.zipCode
+          zipCode: payload.zipCode,
         };
         console.log("API Payload update project:", apiPayload);
         const response = await axios.put(endpoint, apiPayload);
@@ -247,3 +244,5 @@ export const useEditProjectManagementPaymentMutation = () => {
     },
   });
 };
+
+

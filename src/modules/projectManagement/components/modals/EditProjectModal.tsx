@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 // Components
 import { Form, Row, Col, Input, Radio, Select, Button, Flex } from "antd";
 import UploadImageWithCrop from "../UploadImageWithCrop";
 import FormModal from "../../../../components/common/FormModal";
 import { callConfirmModal } from "../../../../components/common/Modal";
 import SmallButton from "../../../../components/common/SmallButton";
-import GoogleMapComponent from "../GoogleMapComponent";
 // Types
 import type {
   ProvinceDataType,
@@ -28,6 +27,17 @@ import { useProjectTypeQuery } from "../../../../utils/queriesGroup/projectManag
 import provinceData from "../../json/province.json";
 import districtData from "../../json/district.json";
 import subDistrictData from "../../json/subDistrict.json";
+// Map
+import GeoCoderControl from "../GeoCoderControl";
+import maplibregl from "maplibre-gl";
+import type { MapLayerMouseEvent } from "maplibre-gl";
+import {
+  Map,
+  FullscreenControl,
+  NavigationControl,
+} from "react-map-gl/maplibre";
+import "@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 import "../../styles/projectManagement.css";
 
@@ -60,46 +70,6 @@ const EditProjectModal = ({
 
   const editMutation = useEditProjectManagementMutation();
 
-  // ===== Map: no-flicker setup =====
-  const mapCoordsRef = useRef<{ lat: number; lng: number }>({
-    lat: 13.736717,
-    lng: 100.523186,
-  });
-  const initialCenterRef = useRef({ lat: 13.736717, lng: 100.523186 });
-  const [hasPickedLocation, setHasPickedLocation] = useState(false);
-
-  const handleLocationChange = useCallback(
-    (lat: number, lng: number) => {
-      mapCoordsRef.current = { lat, lng };
-      if (!hasPickedLocation) {
-        setHasPickedLocation(true);
-      }
-
-      // อัปเดต form values
-      form.setFieldsValue({
-        lat: lat,
-        long: lng,
-      });
-    },
-    [hasPickedLocation, form]
-  );
-
-  // สร้าง MapElement แค่ครั้งเดียว (ไม่ re-mount เมื่อ state อื่นเปลี่ยน)
-  const MapElement = useMemo(
-    () => (
-      <GoogleMapComponent
-        onLocationChange={handleLocationChange}
-        initialLat={initialCenterRef.current.lat}
-        initialLng={initialCenterRef.current.lng}
-        height={470}
-        width="100%"
-        zoom={12}
-        draggableMarker={true}
-      />
-    ),
-    [handleLocationChange]
-  );
-
   const onFinish = async (value: any) => {
     callConfirmModal({
       title: "Request edit project?",
@@ -107,16 +77,9 @@ const EditProjectModal = ({
       okMessage: "Save",
       cancelMessage: "Cancel",
       onOk: async () => {
-        // รวม coordinates จาก mapCoordsRef
-        const payload = {
-          ...value,
-          lat: mapCoordsRef.current.lat,
-          long: mapCoordsRef.current.lng,
-        };
-
-        console.log("Edit payload with coordinates:", payload);
+        // console.log(value);
         editMutation
-          .mutateAsync({ id: data?.id ?? "", payload })
+          .mutateAsync({ id: data?.id ?? "", payload: value })
           .then((res) => {
             console.log(res);
           });
@@ -128,9 +91,6 @@ const EditProjectModal = ({
 
   const onModalClose = () => {
     form.resetFields();
-    // รีเซ็ต map state
-    mapCoordsRef.current = { lat: 13.736717, lng: 100.523186 };
-    setHasPickedLocation(false);
     onCancel();
   };
 
@@ -142,22 +102,14 @@ const EditProjectModal = ({
   useEffect(() => {
     setOpen(isEditModalOpen);
     if (data) {
-      // ตั้งค่า coordinates สำหรับ map
-      const lat = Number(data?.lat) || 13.736717;
-      const lng = Number(data?.long) || 100.523186;
-
-      mapCoordsRef.current = { lat, lng };
-      initialCenterRef.current = { lat, lng };
-      setHasPickedLocation(true);
-
       form.setFieldsValue({
         projectTypeId: String(data?.projectTypeId),
         active: data?.active,
         name: data?.name,
         image: data?.image,
         logo: data?.logo,
-        lat: lat,
-        long: lng,
+        lat: Number(data?.lat),
+        long: Number(data?.long),
         contactNumber: data?.contactNumber,
         email: data?.email,
         province: data?.province,
@@ -169,7 +121,7 @@ const EditProjectModal = ({
         zipCode: data?.zipCode,
       });
     }
-  }, [data, isEditModalOpen, form]);
+  }, [data, isEditModalOpen]);
 
   useEffect(() => {
     if (data) {
@@ -185,13 +137,97 @@ const EditProjectModal = ({
         logo: data.logo,
       });
     }
-  }, [data, form]);
-
+  }, [data]);
   // 🔘 State for radio project type values
   const [value, setValue] = useState<number>();
   const onChange = (e: RadioChangeEvent) => {
     setValue(Number(e.target.value));
     console.log("Project type selected: ", e.target.value);
+  };
+
+  //   console.log("Form values:", values);
+
+  //   if (!selectedRecord?.id && !selectedRecord?.userId) {
+  //     console.error("No ID found for editing");
+  //     return;
+  //   }
+
+  //   callConfirmModal({
+  //     title: "Edit team invitation?",
+  //     message: "Are you sure you want to edit this invitation?",
+  //     okMessage: "Confirm",
+  //     cancelMessage: "Cancel",
+  //     onOk: async () => {
+  //       const userId = selectedRecord.id || selectedRecord.userId!;
+  //       const payload = {
+  //         givenName: values.firstName,
+  //         familyName: values.lastName,
+  //         middleName: values.middleName || "",
+  //         contact: values.contact,
+  //         roleId: Number(values.roleId), // แปลงเป็น number
+  //       };
+
+  //       console.log(
+  //         "Submitting invitation edit with ID:",
+  //         userId,
+  //         "and payload:",
+  //         payload
+  //       );
+
+  //       editMutation.mutate(
+  //         { userId, payload, isListEdit: false },
+  //         {
+  //           onSuccess: () => {
+  //             console.log("Edit invitation successful");
+  //             form.resetFields();
+  //             onOk();
+  //             onRefresh();
+  //           },
+  //           onError: (error: any) => {
+  //             console.error("Edit invitation failed:", error);
+  //             // Error message จะแสดงจาก mutation แล้ว
+  //           },
+  //         }
+  //       );
+  //     },
+  //   });
+  // };
+  // Map
+  const mapRef = useRef<any>();
+  const markerRef = useRef<maplibregl.Marker | null>(null);
+  const currentLocation = useRef<{
+    long: number;
+    lat: number;
+  }>();
+
+  const setMarker = (long: number, lat: number) => {
+    if (!markerRef.current) {
+      currentLocation.current = { long: long, lat: lat };
+      markerRef.current = new maplibregl.Marker({
+        anchor: "bottom",
+        color: "red",
+        draggable: true,
+      })
+        .setLngLat([long, lat])
+        .addTo(mapRef.current?.getMap());
+      // Add dragend handler
+      markerRef.current.on("dragend", (e) => {
+        const { lng, lat } = e.target.getLngLat();
+        currentLocation.current = { long: lng, lat: lat };
+      });
+    } else {
+      markerRef.current.setLngLat([long, lat]);
+      currentLocation.current = { long: long, lat: lat };
+    }
+  };
+
+  const onMapClick = (e: MapLayerMouseEvent) => {
+    const { lng, lat } = e.lngLat;
+    setMarker(lng, lat);
+    form.setFieldsValue({
+      lat: lat.toString(),
+      long: lng.toString(),
+    });
   };
 
   // 🏘️  Province Select State
@@ -264,6 +300,8 @@ const EditProjectModal = ({
     setProvinceValue(value);
     const selectedProvince = allProvinces.find((p) => p.name_en === value);
     const provinceId = selectedProvince?.id;
+    // console.log("Province Name: ", value);
+    // console.log("Province ID: ", provinceId);
 
     // Reset district and sub-district when province changes
     setDistrictValue("");
@@ -296,6 +334,8 @@ const EditProjectModal = ({
     setDistrictValue(value);
     const selectedDistrict = allDistricts.find((d) => d.name_en === value);
     const districtId = selectedDistrict?.id;
+    // console.log("District Name: ", value);
+    // console.log("District ID: ", districtId);
 
     // Reset sub-district when district changes
     setSubDistrictValue("");
@@ -332,6 +372,10 @@ const EditProjectModal = ({
     form.setFieldsValue({
       zipCode: zipCode?.toString(),
     });
+
+    // console.log("Sub-District Name: ", value);
+    // console.log("Sub-District ID: ", subDistrictId);
+    // console.log("Zip Code: ", zipCode);
   };
 
   const ProjectForm = () => {
@@ -339,13 +383,14 @@ const EditProjectModal = ({
       <Form
         form={form}
         name="projectDraftFormEdit"
-        initialValues={{ remember: true }}
+        initialValues={{ remember: true, currentLocation }}
         autoComplete="off"
         layout="vertical"
         onFinish={onFinish}
         onFinishFailed={() => {
           console.log("FINISHED FAILED");
-        }}>
+        }}
+      >
         <Row gutter={20} style={{ paddingInline: "12px" }}>
           {/* Project name | Project type | Province | District | Sub-district | Road */}
           <Col span={6}>
@@ -362,7 +407,8 @@ const EditProjectModal = ({
               name="projectTypeId"
               rules={[
                 { required: true, message: "Please select project type!" },
-              ]}>
+              ]}
+            >
               <Radio.Group
                 size="middle"
                 onChange={onChange}
@@ -373,7 +419,8 @@ const EditProjectModal = ({
                   justifyContent: "space-between",
                   flexWrap: "wrap",
                   rowGap: 12,
-                }}>
+                }}
+              >
                 {typeData?.map((item: any, index: number) => (
                   <Radio key={index} value={item.id}>
                     {item.nameEn}
@@ -389,7 +436,8 @@ const EditProjectModal = ({
                   required: true,
                   message: "Please select province!",
                 },
-              ]}>
+              ]}
+            >
               <Select
                 value={provinceValue}
                 options={optionsProvince}
@@ -412,7 +460,8 @@ const EditProjectModal = ({
                   required: true,
                   message: "Please select district!",
                 },
-              ]}>
+              ]}
+            >
               <Select
                 value={districtValue}
                 options={optionsDistrict}
@@ -437,7 +486,8 @@ const EditProjectModal = ({
                   required: true,
                   message: "Please select sub-district!",
                 },
-              ]}>
+              ]}
+            >
               <Select
                 value={subDistrictValue}
                 options={optionsSubDistrict}
@@ -493,7 +543,8 @@ const EditProjectModal = ({
             <Form.Item
               label="Phone number"
               name="contactNumber"
-              rules={telRule}>
+              rules={telRule}
+            >
               <Input
                 size="middle"
                 placeholder="Please input phone number"
@@ -501,9 +552,7 @@ const EditProjectModal = ({
                 showCount
               />
             </Form.Item>
-            <Form.Item label="Email" name="email" 
-            // rules={emailRule}
-            >
+            <Form.Item label="Email" name="email" rules={emailRule}>
               <Input
                 size="middle"
                 placeholder="Please input email"
@@ -522,7 +571,8 @@ const EditProjectModal = ({
                   required: true,
                   message: "Please upload project image!",
                 },
-              ]}>
+              ]}
+            >
               <UploadImageWithCrop
                 onChange={(url) => setPreviewImage(url)}
                 image={previewImage}
@@ -538,7 +588,8 @@ const EditProjectModal = ({
                   required: true,
                   message: "Please upload logo project!",
                 },
-              ]}>
+              ]}
+            >
               <UploadImageWithCrop
                 onChange={(url) => setPreviewLogo(url)}
                 image={previewLogo}
@@ -547,40 +598,44 @@ const EditProjectModal = ({
               />
             </Form.Item>
           </Col>
-          {/* Google Map */}
+          {/* Map */}
           <Col span={6}>
-            <Form.Item
-              label="Map"
-              rules={[
-                {
-                  validator: () => {
-                    if (!hasPickedLocation) {
-                      return Promise.reject(
-                        "Please select a location on the map"
-                      );
-                    }
-                    return Promise.resolve();
-                  },
-                },
-              ]}>
-              {MapElement}
-              {hasPickedLocation && (
-                <div style={{ marginTop: 12, fontSize: 12, color: "#333" }}>
-                  Selected: {mapCoordsRef.current.lat.toFixed(6)},{" "}
-                  {mapCoordsRef.current.lng.toFixed(6)}
-                </div>
-              )}
+            <Form.Item label="Map" rules={requiredRule}>
+              <div
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const geocoderInput = document.querySelector(
+                      ".mapboxgl-ctrl-geocoder input"
+                    ) as HTMLInputElement;
+                    geocoderInput?.focus();
+                  }
+                }}
+                tabIndex={0}
+                style={{ outline: "none" }}
+              >
+                <Map
+                  initialViewState={{
+                    longitude: 100.523186,
+                    latitude: 13.736717,
+                    zoom: 12,
+                  }}
+                  mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+                  style={{ width: "100%", height: 470, borderRadius: 8 }}
+                  onClick={onMapClick}
+                  ref={mapRef}
+                >
+                  <GeoCoderControl position="top-left" />
+                  <FullscreenControl />
+                  <NavigationControl />
+                </Map>
+              </div>
             </Form.Item>
             <Form.Item name="lat" hidden>
               <Input />
             </Form.Item>
             <Form.Item name="long" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="country" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="timeZone" hidden>
               <Input />
             </Form.Item>
           </Col>
