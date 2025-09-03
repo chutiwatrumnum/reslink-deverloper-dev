@@ -1,0 +1,9 @@
+
+.ant-upload{
+    border: 0 !important;
+}
+
+.noImageIconUpload {
+    width: 56px !important;
+    height: 56px !important;
+}

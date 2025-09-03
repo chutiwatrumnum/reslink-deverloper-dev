@@ -1,0 +1,122 @@
+/* Modal Steps */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 10px;
+}
+
+.modalBody {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    width: 90%;
+    max-height: 95dvh;
+    overflow: hidden;
+}
+
+.modalHeader {
+    padding: 10px;
+    border-bottom: 1px solid #DFDFDF;
+    width: 100%;
+}
+
+.modalContent {
+    position: relative;
+    padding: 12px;
+    overflow-y: auto;
+    max-height: calc(95dvh - 80px);
+}
+
+/* Step */
+.stepperStyle {
+    display: flex;
+    width: 40%;
+    align-items: flex-start;
+    margin-inline: auto;
+    padding: 12px;
+    gap: 14px;
+}
+
+.containerStep {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    cursor: pointer;
+}
+
+.titleContainerStep {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.titleStep {
+    font-size: 16px;
+    font-weight: 400;
+    transition: color 300ms;
+    margin: 0;
+}
+
+.lineContainerStep {
+    display: flex;
+    align-items: center;
+}
+
+.lineStep {
+    height: 0.5rem;
+    flex: 1;
+    border-radius: 9999px;
+    transition: all 300ms;
+    opacity: 1;
+}
+
+/* Navigation */
+.navigationStep {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+/* package card */
+.packageCardTitle {
+    font-size: 16px;
+    color: var(--primary-color);
+}
+
+.packageSubTitle {
+    color: var( --subMenuText-color);
+}
+
+.packageBoxCustom {
+    width: 100%;
+    border: 1px solid;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 8px 12px -10px rgba(0, 0, 0, 0.05);
+}
+
+.previewCardTitle {
+    font-size: 16px;
+    color: var(--primary-color);
+}
+
+/* Package Form */
+.radioGroupCustom {
+    display: flex;
+    flex-direction: column;
+    row-gap: 8px;
+}
+
+.packageLink {
+    text-decoration:underline;
+    color: var(--secondary-color);
+}
