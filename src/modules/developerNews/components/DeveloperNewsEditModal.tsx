@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Form, Input, Row, Col, DatePicker, TimePicker, Select } from "antd";
+import { Form, Input, Row, Col, DatePicker, TimePicker, Select, message } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
@@ -49,6 +49,9 @@ export default function DeveloperNewsEditModal({
   useEffect(() => {
     if (!selectedRecord || !isEditModalOpen) return;
 
+    console.log("🔄 Setting form values for edit modal...");
+    console.log("📋 Selected Record:", selectedRecord);
+
     // Parse dates และ times
     const startDate = selectedRecord.startDate
       ? dayjs(selectedRecord.startDate)
@@ -68,18 +71,31 @@ export default function DeveloperNewsEditModal({
     // Get selected projects - รองรับทั้ง newsToProjects และ projects format
     let selectedProjects: string[] = [];
 
-    if (
-      selectedRecord.newsToProjects &&
-      selectedRecord.newsToProjects.length > 0
-    ) {
-      // ใช้ข้อมูลจาก newsToProjects (API ใหม่)
-      selectedProjects = selectedRecord.newsToProjects.map(
-        (ntp) => ntp.projectId
-      );
-    } else if (selectedRecord.projects && selectedRecord.projects.length > 0) {
-      // ใช้ข้อมูลจาก projects (format เดิม)
-      selectedProjects = selectedRecord.projects.map((p) => p.projectId);
+    // ลองดู newsToProjects ก่อน (API ใหม่)
+    if (selectedRecord.newsToProjects && selectedRecord.newsToProjects.length > 0) {
+      console.log("📋 Using newsToProjects:", selectedRecord.newsToProjects);
+      selectedProjects = selectedRecord.newsToProjects
+        .map((ntp) => {
+          // ตรวจสอบ structure ของ newsToProjects
+          if (ntp.project && ntp.project.id) {
+            return ntp.project.id; // ใช้ project.id
+          } else if (ntp.projectId) {
+            return ntp.projectId; // fallback ใช้ projectId
+          }
+          return null;
+        })
+        .filter(Boolean); // กรองค่า null/undefined ออก
     }
+    // Fallback ไปใช้ projects (format เดิม)
+    else if (selectedRecord.projects && selectedRecord.projects.length > 0) {
+      console.log("📋 Using projects:", selectedRecord.projects);
+      selectedProjects = selectedRecord.projects
+        .map((p) => p.projectId)
+        .filter(Boolean); // กรองค่า null/undefined ออก
+    }
+
+    console.log("📋 Selected Projects IDs:", selectedProjects);
+    console.log("📋 Available Project Options:", projectsData);
 
     // ตั้งค่า imageUrl ก่อน setFieldsValue
     const currentImageUrl = selectedRecord.imageUrl || "";
@@ -106,7 +122,7 @@ export default function DeveloperNewsEditModal({
       description: selectedRecord.description || "",
       url: selectedRecord.url || "",
     });
-  }, [selectedRecord, isEditModalOpen, form]);
+  }, [selectedRecord, isEditModalOpen, form, projectsData]);
 
   const handleImageChange = (url: string) => {
     console.log("📸 Image changed:", url);
@@ -116,6 +132,7 @@ export default function DeveloperNewsEditModal({
   const onFinish = (values: any) => {
     if (!selectedRecord?.id) {
       console.error("❌ No selectedRecord.id found");
+      message.error("Error: No news ID found");
       return;
     }
 
@@ -319,6 +336,24 @@ export default function DeveloperNewsEditModal({
                   ?.toLowerCase()
                   .includes(input.toLowerCase())
               }
+              notFoundContent={
+                projectsLoading ? "Loading..." : "No projects found"
+              }
+              onSelect={(value, option) => {
+                console.log("🎯 Project selected:", { value, option });
+              }}
+              onDeselect={(value, option) => {
+                console.log("❌ Project deselected:", { value, option });
+              }}
+              onChange={(values) => {
+                console.log("🔄 Projects changed:", values);
+              }}
+              onDropdownVisibleChange={(open) => {
+                if (open) {
+                  console.log("📋 Dropdown opened - Current form values:", form.getFieldValue('projects'));
+                  console.log("📋 Available options:", projectsData);
+                }
+              }}
             />
           </Form.Item>
 
