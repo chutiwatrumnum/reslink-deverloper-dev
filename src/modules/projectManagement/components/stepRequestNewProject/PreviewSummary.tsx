@@ -17,7 +17,7 @@ type PreviewSummaryPropsType = {
   checkedStandardValues: string[];
   checkedFeatureValues: string[];
   standardPackage: FeaturesDataType[];
-  optionalFeature: FeaturesDataType[];
+  optionalFeature: any[];
   form?: any;
   previewData?: PreviewFeatureById;
 };
@@ -27,7 +27,6 @@ const PreviewSummary = ({
   checkedFeatureValues,
   standardPackage,
   optionalFeature,
-  previewData,
   form,
 }: PreviewSummaryPropsType) => {
   const { Text } = Typography;
@@ -37,6 +36,7 @@ const PreviewSummary = ({
     if (!item?.id) return false;
     return checkedStandardValues.includes(String(item.id));
   });
+
   const selectedOptionalFeature = optionalFeature.filter((item) => {
     if (!item?.id) return false;
     return checkedFeatureValues.includes(String(item.id));
@@ -48,6 +48,7 @@ const PreviewSummary = ({
     );
     return standardItem ? Number(standardItem.price) : 50000;
   };
+
   const getVatRate = () => {
     const standardItem = basedPriceData?.basePrice?.find(
       (item: any) => item.name === "Standard"
@@ -61,8 +62,9 @@ const PreviewSummary = ({
     const standardBasedPrice =
       checkedStandardValues.length > 0 ? getStandardPrice() : 0;
 
+    // Use displayPrice for adjusted pricing (bundle logic)
     const optionalBasedPrice = selectedOptionalFeature.reduce(
-      (sum, i) => sum + Number(i.price ?? 0),
+      (sum, i) => sum + Number(i.displayPrice ?? i.price ?? 0),
       0
     );
 
@@ -70,7 +72,7 @@ const PreviewSummary = ({
     const totalOptional = optionalBasedPrice;
 
     // Calculate subtotal
-    const subtotal = standardBasePrice + optionalBasePrice;
+    const subtotal = standardBasedPrice + optionalBasedPrice;
 
     // Calculate VAT
     const vatRate = getVatRate();
@@ -82,8 +84,8 @@ const PreviewSummary = ({
     const features = [...selectedStandardPackage, ...selectedOptionalFeature];
 
     form.setFieldsValue({
-      standardBasePrice: Number(standardBasePrice),
-      optionalBasePrice: Number(optionalBasePrice),
+      standardBasePrice: Number(standardBasedPrice),
+      optionalBasePrice: Number(optionalBasedPrice),
       totalStandard: Number(totalStandard),
       totalOptional: Number(totalOptional),
       totalPrice: Number(subtotal),
@@ -103,10 +105,13 @@ const PreviewSummary = ({
 
   const standardBasePrice =
     checkedStandardValues.length > 0 ? getStandardPrice() : 0;
+
+  // Use displayPrice for bundle-adjusted pricing
   const optionalBasePrice = selectedOptionalFeature.reduce(
-    (sum, f) => sum + Number(f.price ?? 0),
+    (sum, f) => sum + Number(f.displayPrice ?? f.price ?? 0),
     0
   );
+
   const subtotal = standardBasePrice + optionalBasePrice;
   const vatRate = getVatRate();
   const vatAmount = subtotal * vatRate;
@@ -174,7 +179,7 @@ const PreviewSummary = ({
             </div>
           )}
 
-          {/* Optional Features preview */}
+          {/* Optional Features preview - Updated to show bundle pricing */}
           {checkedFeatureValues.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <Row>
@@ -196,31 +201,84 @@ const PreviewSummary = ({
                   </Typography.Title>
                 </Col>
               </Row>
-              {selectedOptionalFeature.map((item, index) => (
-                <Row key={index} style={{ borderInline: "1px solid #c6c8c9" }}>
-                  <Col span={12} className="previewPackageCol">
-                    <Flex justify="space-between">
-                      <Text style={{ color: "var(--primary-color)" }}>
-                        {item?.name}
-                      </Text>
-                    </Flex>
-                  </Col>
-                  <Col span={12} style={{ borderBottom: "1px solid #c6c8c9" }}>
-                    <Flex
-                      justify="center"
-                      align="center"
-                      style={{ width: "100%", height: "100%" }}
+              {selectedOptionalFeature.map((item, index) => {
+                // Check if this feature is bundled (free due to another selection)
+                const displayPrice = item.displayPrice ?? item.price ?? 0;
+                const originalPrice = item.originalPrice ?? item.price ?? 0;
+                const isFree = displayPrice === 0 && originalPrice > 0;
+
+                return (
+                  <Row
+                    key={index}
+                    style={{ borderInline: "1px solid #c6c8c9" }}
+                  >
+                    <Col span={12} className="previewPackageCol">
+                      <Flex justify="space-between" align="center" gap={2}>
+                        <div>
+                          <Text style={{ color: "var(--primary-color)" }}>
+                            {item?.name}
+                          </Text>
+                          {isFree && (
+                            <div>
+                              <Text
+                                style={{
+                                  fontSize: "12px",
+                                  color: "var(--success-color)",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                (Bundled)
+                              </Text>
+                            </div>
+                          )}
+                        </div>
+                      </Flex>
+                    </Col>
+                    <Col
+                      span={12}
+                      style={{ borderBottom: "1px solid #c6c8c9" }}
                     >
-                      <Text style={{ color: "var(--primary-color)" }}>
-                        {item?.price
-                          ? Number(item.price).toLocaleString()
-                          : "0"}
-                        .-
-                      </Text>
-                    </Flex>
-                  </Col>
-                </Row>
-              ))}
+                      <Flex
+                        justify="center"
+                        align="center"
+                        style={{ width: "100%", height: "100%" }}
+                      >
+                        <Flex
+                          justify="center"
+                          align="center"
+                          gap={2}
+                          vertical={true}
+                        >
+                          {isFree && (
+                            <Text
+                              style={{
+                                color: "#999",
+                                textDecoration: "line-through",
+                                fontSize: "12px",
+                                display: "block",
+                              }}
+                            >
+                              {Number(originalPrice).toLocaleString()}.-
+                            </Text>
+                          )}
+                          <Text
+                            style={{
+                              color: isFree
+                                ? "var(--success-color)"
+                                : "var(--primary-color)",
+                              fontWeight: isFree ? 600 : 400,
+                            }}
+                          >
+                            {isFree
+                              ? "0.-"
+                              : `${Number(displayPrice).toLocaleString()}.-`}
+                          </Text>
+                        </Flex>
+                      </Flex>
+                    </Col>
+                  </Row>
+                );
+              })}
             </div>
           )}
 
@@ -247,6 +305,59 @@ const PreviewSummary = ({
                 >
                   <Text style={{ color: "var(--primary-color)" }}>
                     {Number(vatAmount.toFixed(2)).toLocaleString()}.-
+                  </Text>
+                </Flex>
+              </Col>
+            </Row>
+          )}
+
+          {/* Savings indicator (optional) */}
+          {selectedOptionalFeature.some(
+            (item) =>
+              (item.displayPrice ?? item.price ?? 0) <
+              (item.originalPrice ?? item.price ?? 0)
+          ) && (
+            <Row
+              style={{
+                border: "1px solid var(--success-color)",
+                marginTop: 8,
+                backgroundColor: "#f6ffed",
+              }}
+            >
+              <Col
+                span={12}
+                style={{
+                  borderRight: "1px solid var(--success-color)",
+                  padding: 6,
+                }}
+              >
+                <Text
+                  style={{ color: "var(--success-color)", fontWeight: 600 }}
+                >
+                  Bundle Savings
+                </Text>
+              </Col>
+              <Col span={12}>
+                <Flex
+                  justify="center"
+                  align="center"
+                  style={{ width: "100%", padding: 6 }}
+                >
+                  <Text
+                    style={{ color: "var(--success-color)", fontWeight: 600 }}
+                  >
+                    -
+                    {Number(
+                      selectedOptionalFeature
+                        .reduce((savings, item) => {
+                          const original =
+                            item.originalPrice ?? item.price ?? 0;
+                          const display = item.displayPrice ?? item.price ?? 0;
+                          return savings + (original - display);
+                        }, 0)
+                        .toFixed(2)
+                    ).toLocaleString()}
+                    .-
                   </Text>
                 </Flex>
               </Col>

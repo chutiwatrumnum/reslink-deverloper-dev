@@ -1262,6 +1262,7 @@ const CreateProjectModal = ({
       cancelMessage: "Cancel",
       onOk: async () => {
         console.log(value);
+        // onCreateInvoicePackage();
         projectForm.resetFields();
         setIsSuccessPayment(false);
         setLicenseId(null);

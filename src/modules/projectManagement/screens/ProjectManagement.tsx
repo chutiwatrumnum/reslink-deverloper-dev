@@ -101,7 +101,7 @@ const ProjectManagement = () => {
   const currentDataSource = isApproved
     ? currentProjectData?.rows?.filter((project) => {
         const status = project?.status?.nameCode;
-        return status === "activated" || status === "expired";
+        return status === "activated";
       }) || []
     : currentProjectData?.rows?.filter((project) => {
         const status = project?.status?.nameCode;
@@ -131,7 +131,7 @@ const ProjectManagement = () => {
     }
   };
 
-  const [dataEdit, setDataEdit] = useState<ProjectFromDataType>();
+  const [dataEdit, setDataEdit] = useState();
 
   // Mutations
   const deleteMutation = useDeleteProjectManagementMutation();
@@ -142,13 +142,15 @@ const ProjectManagement = () => {
   const { data: featuresByProjectId } = useFeaturesByProjectIdQuery(
     selectedProjectId?.toString()
   );
-
-  const { data: featureAndProjectById } = useFeaturesAndProjectByIdQuery();
+  const { data: featureAndProjectById } = useFeaturesAndProjectByIdQuery(
+    selectedProjectId?.toString()
+  );
 
   const dataById = projectByIdData || selectedInfo;
   const dataFeatureByProjectId = featuresByProjectId || selectedInfo;
 
-  const featureAndProjectData = featureAndProjectById || selectedInfo;
+  const projectData = featureAndProjectById?.project || selectedInfo;
+  const licenseData = featureAndProjectById?.licenses || selectedInfo;
 
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -179,6 +181,11 @@ const ProjectManagement = () => {
 
   const onTabsChange = (key: string) => {
     setIsApproved(key === "approved");
+    if (key === "approved") {
+      setApprovedPage(1);
+    } else {
+      setUnapprovedPage(1);
+    }
   };
   // 🪧➕ Request new project Modal
   const onCreate = () => {
@@ -207,7 +214,7 @@ const ProjectManagement = () => {
   };
 
   // 🪧🖋️ Edit project form Modal
-  const onEditProject = async (data: ProjectManageType) => {
+  const onEditProject = async (data: any) => {
     setDataEdit(data);
     setIsEditProjectModalOpen(true);
   };
@@ -679,13 +686,13 @@ const ProjectManagement = () => {
         footer={false}
         centered={true}
       >
-        {dataById ? (
+        {projectData ? (
           <Row gutter={24} style={{ marginTop: 24 }}>
             {/* Image and Logo Info */}
             <Col span={4}>
               <Flex vertical={true} gap={6} style={{ marginBottom: 16 }}>
                 <Text strong>Project image</Text>
-                {!dataById.image ? (
+                {!projectData?.image ? (
                   <Flex
                     style={{
                       backgroundColor: "#f5f5f5",
@@ -704,7 +711,7 @@ const ProjectManagement = () => {
                   <>
                     <Image
                       height={"100%"}
-                      src={dataById?.image}
+                      src={projectData?.image}
                       style={{
                         objectFit: "contain",
                         borderRadius: 8,
@@ -716,7 +723,7 @@ const ProjectManagement = () => {
               </Flex>
               <Flex vertical={true} gap={6}>
                 <Text strong>Logo project</Text>
-                {!dataById.logo ? (
+                {!projectData?.logo ? (
                   <Flex
                     style={{
                       backgroundColor: "#f5f5f5",
@@ -735,7 +742,7 @@ const ProjectManagement = () => {
                   <>
                     <Image
                       height={"100%"}
-                      src={dataById?.logo}
+                      src={projectData?.logo}
                       style={{
                         objectFit: "contain",
                         borderRadius: 8,
@@ -765,19 +772,19 @@ const ProjectManagement = () => {
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Project name</Text>
-                        <Text>{dataById?.name || "-"}</Text>
+                        <Text>{projectData?.name || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Road</Text>
-                        <Text>{dataById?.road || "-"}</Text>
+                        <Text>{projectData?.road || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Email</Text>
-                        <Text>{dataById?.email || "-"}</Text>
+                        <Text></Text>
                       </Flex>
                     </Col>
                   </Row>
@@ -785,24 +792,24 @@ const ProjectManagement = () => {
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Project type</Text>
-                        <Text>{dataById?.type.nameEn || "-"}</Text>
+                        <Text>{projectData?.type?.nameEn || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Soi</Text>
-                        <Text>{dataById?.subStreet || "-"}</Text>
+                        <Text>{projectData?.subStreet || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Map</Text>
-                        {dataById?.lat && dataById?.long && (
+                        {projectData?.lat && projectData?.long && (
                           <Button
                             size="small"
                             type="link"
                             onClick={() =>
-                              onViewMap(dataById?.lat, dataById?.long)
+                              onViewMap(projectData?.lat, projectData?.long)
                             }
                             style={{
                               border: `1px solid var(--secondary-color)`,
@@ -820,13 +827,13 @@ const ProjectManagement = () => {
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Province</Text>
-                        <Text>{dataById?.province || "-"}</Text>
+                        <Text>{projectData.project?.province || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Address</Text>
-                        <Text>{dataById?.address || "-"}</Text>
+                        <Text>{projectData.project?.address || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
@@ -850,13 +857,13 @@ const ProjectManagement = () => {
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>District</Text>
-                        <Text>{featureAndProjectData?.district || "-"}</Text>
+                        <Text>{projectData?.district || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Postal code</Text>
-                        <Text>{featureAndProjectData?.zipCode || "-"}</Text>
+                        <Text>{projectData?.zipCode || "-"}</Text>
                       </Flex>
                     </Col>
                   </Row>
@@ -864,15 +871,13 @@ const ProjectManagement = () => {
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Sub-district</Text>
-                        <Text>{featureAndProjectData?.subdistrict || "-"}</Text>
+                        <Text>{projectData?.subdistrict || "-"}</Text>
                       </Flex>
                     </Col>
                     <Col span={8}>
                       <Flex vertical={true} gap={6}>
                         <Text strong>Phone number</Text>
-                        <Text>
-                          {featureAndProjectData?.contactNumber || "-"}
-                        </Text>
+                        <Text>{projectData?.contactNumber || "-"}</Text>
                       </Flex>
                     </Col>
                   </Row>
@@ -882,11 +887,11 @@ const ProjectManagement = () => {
             {/* Standard package and Optional feature preview */}
             <Col span={10}>
               <Flex vertical={true} gap={6}>
-                {dataFeatureByProjectId?.features ? (
+                {licenseData ? (
                   <Text style={{ fontWeight: 600 }}>
                     Current package:{" "}
                     {`Standard + ${
-                      dataFeatureByProjectId?.optionalFeatureLength || 0
+                      licenseData[0]?.optionalFeatureLength || 0
                     } optional features`}
                   </Text>
                 ) : (

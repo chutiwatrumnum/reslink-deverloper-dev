@@ -892,13 +892,28 @@ const InvoiceDocument: React.FC<{ data: InvoiceData }> = ({ data }) => {
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.brandRow}>
           {d.logo?.invoiceLogo ? (
-            <Image src={d.logo.invoiceLogo} style={styles.logo} />
+            <Image src={localLogo} style={styles.logo} />
           ) : (
             <View />
           )}
           <View style={{ width: 120 }} />
         </View>
-        <Text style={styles.title}>Invoice (continued)</Text>
+        <Text style={styles.title}>Invoice</Text>
+
+        <View style={styles.addrRow}>
+          <View style={styles.addrCol}>
+            <Text style={styles.addrLabel}>From</Text>
+            <View style={styles.addrBox}>
+              <Text style={styles.addrText}>{d.address.lifeStyleAddress}</Text>
+            </View>
+          </View>
+          <View style={styles.addrCol}>
+            <Text style={styles.addrLabel}>Customer detail</Text>
+            <View style={styles.addrBox}>
+              <Text style={styles.addrText}>{d.address.customerAddress}</Text>
+            </View>
+          </View>
+        </View>
 
         <GroupBlock label="Optional features" items={opt} />
 
