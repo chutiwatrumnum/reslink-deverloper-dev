@@ -7,6 +7,7 @@ import FormModal from "../../../components/common/FormModal";
 import { callConfirmModal } from "../../../components/common/Modal";
 import SmallButton from "../../../components/common/SmallButton";
 import UploadImageGroup from "../../../components/group/UploadImageGroup";
+import UploadImageWithCrop from "../../projectManagement/components/UploadImageWithCrop";
 
 import type {
   DeveloperNewsType,
@@ -244,12 +245,11 @@ export default function DeveloperNewsEditModal({
             label="Image"
             name="image"
             className="developerNews-image-item">
-            <UploadImageGroup
-              onChange={handleImageChange}
-              image={imageUrl}
+            <UploadImageWithCrop
+              aspectRatio={16 / 9}
               disabled={isSubmitting}
               height={220}
-              ratio="*File size <1MB, 16:9 Ratio, *JPGs"
+              ratio="*File size <1MB, 16:9 ratio (1280x720 px)"
             />
           </Form.Item>
         </Col>
@@ -350,7 +350,10 @@ export default function DeveloperNewsEditModal({
               }}
               onDropdownVisibleChange={(open) => {
                 if (open) {
-                  console.log("📋 Dropdown opened - Current form values:", form.getFieldValue('projects'));
+                  console.log(
+                    "📋 Dropdown opened - Current form values:",
+                    form.getFieldValue("projects")
+                  );
                   console.log("📋 Available options:", projectsData);
                 }
               }}
