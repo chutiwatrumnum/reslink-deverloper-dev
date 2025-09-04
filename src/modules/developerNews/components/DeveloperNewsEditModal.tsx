@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
-import { Form, Input, Row, Col, DatePicker, TimePicker, Select, message } from "antd";
+import {
+  Form,
+  Input,
+  Row,
+  Col,
+  DatePicker,
+  TimePicker,
+  Select,
+  message,
+} from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
 import FormModal from "../../../components/common/FormModal";
 import { callConfirmModal } from "../../../components/common/Modal";
 import SmallButton from "../../../components/common/SmallButton";
-import UploadImageGroup from "../../../components/group/UploadImageGroup";
 import UploadImageWithCrop from "../../projectManagement/components/UploadImageWithCrop";
 
 import type {
@@ -39,7 +47,6 @@ export default function DeveloperNewsEditModal({
 }: Props) {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
 
   // Use mutation
   const updateMutation = useUpdateDeveloperNewsMutation();
@@ -73,7 +80,10 @@ export default function DeveloperNewsEditModal({
     let selectedProjects: string[] = [];
 
     // ลองดู newsToProjects ก่อน (API ใหม่)
-    if (selectedRecord.newsToProjects && selectedRecord.newsToProjects.length > 0) {
+    if (
+      selectedRecord.newsToProjects &&
+      selectedRecord.newsToProjects.length > 0
+    ) {
       console.log("📋 Using newsToProjects:", selectedRecord.newsToProjects);
       selectedProjects = selectedRecord.newsToProjects
         .map((ntp) => {
@@ -98,10 +108,6 @@ export default function DeveloperNewsEditModal({
     console.log("📋 Selected Projects IDs:", selectedProjects);
     console.log("📋 Available Project Options:", projectsData);
 
-    // ตั้งค่า imageUrl ก่อน setFieldsValue
-    const currentImageUrl = selectedRecord.imageUrl || "";
-    setImageUrl(currentImageUrl);
-
     console.log("🔄 Setting form values:", {
       title: selectedRecord.title,
       startDate: startDate,
@@ -109,7 +115,7 @@ export default function DeveloperNewsEditModal({
       startTime: startTime,
       endTime: endTime,
       projects: selectedProjects,
-      imageUrl: currentImageUrl,
+      imageUrl: selectedRecord.imageUrl || "",
     });
 
     form.setFieldsValue({
@@ -122,13 +128,9 @@ export default function DeveloperNewsEditModal({
       projects: selectedProjects, // ตั้งค่า selected projects
       description: selectedRecord.description || "",
       url: selectedRecord.url || "",
+      imageUrl: selectedRecord.imageUrl || "", // ใช้ Form.Item name="imageUrl"
     });
   }, [selectedRecord, isEditModalOpen, form, projectsData]);
-
-  const handleImageChange = (url: string) => {
-    console.log("📸 Image changed:", url);
-    setImageUrl(url);
-  };
 
   const onFinish = (values: any) => {
     if (!selectedRecord?.id) {
@@ -138,7 +140,6 @@ export default function DeveloperNewsEditModal({
     }
 
     console.log("📝 Form values:", values);
-    console.log("📸 Current imageUrl:", imageUrl);
     console.log("📋 Selected record:", selectedRecord);
 
     callConfirmModal({
@@ -163,7 +164,7 @@ export default function DeveloperNewsEditModal({
           title: values.title,
           description: values.description || "",
           url: values.url || "",
-          imageUrl: imageUrl || "", // ใช้ imageUrl จาก state แทน
+          imageUrl: values.imageUrl || "", // ใช้ imageUrl จาก form values
           startDate: values.startDate
             ? dayjs(values.startDate).format("YYYY-MM-DD")
             : "",
@@ -189,7 +190,6 @@ export default function DeveloperNewsEditModal({
             onSuccess: () => {
               console.log("✅ Update successful");
               form.resetFields();
-              setImageUrl("");
               onOk();
               onRefresh();
             },
@@ -204,7 +204,6 @@ export default function DeveloperNewsEditModal({
 
   const handleClose = () => {
     form.resetFields();
-    setImageUrl("");
     onCancel();
   };
 
@@ -241,9 +240,10 @@ export default function DeveloperNewsEditModal({
             />
           </Form.Item>
 
+          {/* แก้ไขส่วนนี้ - ใช้ Form.Item กับ name="imageUrl" */}
           <Form.Item
             label="Image"
-            name="image"
+            name="imageUrl"
             className="developerNews-image-item">
             <UploadImageWithCrop
               aspectRatio={16 / 9}
