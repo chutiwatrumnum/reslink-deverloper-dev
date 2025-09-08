@@ -131,3 +131,9 @@
 .ant-checkbox-wrapper-disabled .ant-checkbox-label {
   color: #3f3f3f !important;
 }
+
+/* Checkbox optional feature */
+
+.optionalFeature .ant-checkbox-wrapper-disabled .ant-checkbox-label {
+  color: #d3d3d3 !important;
+}

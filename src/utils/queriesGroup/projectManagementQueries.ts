@@ -216,29 +216,28 @@ export const useFeaturesByProjectIdQuery = (projectId?: string) => {
   });
 };
 
-const getPreviewFeatureById = async ({
+const getFeatureByProjectId = async ({
   queryKey,
-}: QueryFunctionContext<[string, string]>): Promise<PreviewFeatureById> => {
-  const [_key, licenseId] = queryKey;
+}: QueryFunctionContext<[string, string]>) => {
+  const [_key, projectId] = queryKey;
 
-  if (!licenseId) throw new Error("License ID is required");
+  if (!projectId) throw new Error("Project ID is required");
 
-  const url = `/license/preview/${licenseId}/dashboard`;
+  const url = `/license/${projectId}/dashboard`;
   const res = await axios.get(url);
 
-  // Type assertion to tell TypeScript this has the correct structure
   if (res.data.result) {
-    return res.data.result as PreviewFeatureById;
+    return res.data.result.licenses;
   } else {
     throw new Error("Preview data not found");
   }
 };
 
 // Updated query hook with new type
-export const usePreviewFeatureByIdQuery = (id?: string) => {
-  return useQuery<PreviewFeatureById, Error>({
+export const useFeatureByProjectIdQuery = (id?: string) => {
+  return useQuery({
     queryKey: ["previewFeatureById", id],
-    queryFn: getPreviewFeatureById,
+    queryFn: getFeatureByProjectId,
     enabled: !!id,
     staleTime: 30 * 1000,
   });
@@ -256,7 +255,7 @@ const getFeaturesAndProjectById = async ({
   const url = `/license/preview/${projectId}/dashboard`;
   const res = await axios.get(url);
 
-  if (res.data.result) {
+  if (res.data?.result) {
     return res.data.result;
   } else {
     throw new Error("Project by id not found");

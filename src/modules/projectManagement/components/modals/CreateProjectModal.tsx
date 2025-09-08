@@ -61,11 +61,7 @@ import successPaymentImage from "../../../../assets/images/success-payment.png";
 import { DeleteOutlined } from "@ant-design/icons";
 
 // Config input rule
-import {
-  requiredRule,
-  emailRule,
-  telRule,
-} from "../../../../configs/inputRule";
+import { requiredRule, telRule } from "../../../../configs/inputRule";
 
 // JSON
 import countryData from "../../json/countries.json";
@@ -82,7 +78,7 @@ import {
 import {
   useProjectTypeQuery,
   useFeaturesQuery,
-  usePreviewFeatureByIdQuery,
+  useFeaturesAndProjectByIdQuery,
 } from "../../../../utils/queriesGroup/projectManagementQueries";
 
 type CreateProjectModalPropsType = {
@@ -111,20 +107,24 @@ const CreateProjectModal = ({
   licenseId: useLicenseId,
   initialStep = 1,
 }: CreateProjectModalPropsType) => {
+  // Forms
   const [projectForm] = Form.useForm();
   const [packageForm] = Form.useForm();
   const [payForm] = Form.useForm();
 
   const [open, setOpen] = useState<boolean>(false);
   const [previewProofPayment, setPreviewProofPayment] = useState("");
-  const { data: typeData } = useProjectTypeQuery();
-  const { data: featuresData } = useFeaturesQuery();
+
   // Mutation
   const createProject = postCreateProjectManagementMutation();
   const createPackageInvoice = postCreatePackageInvoiceMutation();
   const updatePayment = useEditProjectManagementPaymentMutation();
 
-  // project id & license id state
+  // Queries
+  const { data: typeData } = useProjectTypeQuery();
+  const { data: featuresData } = useFeaturesQuery();
+
+  // Project id & License id state
   const [projectId, setProjectId] = useState<string | null>(
     useProjectId || null
   );
@@ -132,15 +132,16 @@ const CreateProjectModal = ({
     useLicenseId || null
   );
 
-  const { data: featureAndBankPreview } = usePreviewFeatureByIdQuery(
+  const { data: featureAndBankPreview } = useFeaturesAndProjectByIdQuery(
     licenseId!
   );
 
+  // Bank info data in step 3
   const bankName = featureAndBankPreview?.bank?.bankName || "";
   const accountNo = featureAndBankPreview?.bank?.accountNo || "";
   const accountName = featureAndBankPreview?.bank?.accountName || "";
 
-  // delete proof of payment func
+  // Delete proof of payment func
   const handleDeleteProofPayment = () => {
     setPreviewProofPayment("");
     payForm.resetFields(["file"]);
@@ -170,7 +171,6 @@ const CreateProjectModal = ({
   };
 
   //Configuring Ant Design components
-  const { TextArea } = Input;
   const { Text } = Typography;
 
   //State for radio project type values
@@ -307,7 +307,7 @@ const CreateProjectModal = ({
     }
   };
 
-  const getDistrictData = async () => {
+  const getDistrictData = () => {
     try {
       const data = districtData as DistrictDataTypes[];
       setAllDistricts(data);
@@ -336,15 +336,12 @@ const CreateProjectModal = ({
     setCountryValue(value);
     const selectedCountry = allCountries.find((c) => c.name === value);
     const countryId = selectedCountry?.id;
-    const timeZoneCountry = selectedCountry?.timezones?.[0]?.zoneName || "";
-    setTimezone(timeZoneCountry);
-
-    setProvinceValue("");
-    setDistrictValue("");
 
     projectForm.setFieldsValue({
       province: "",
-      timeZone: timeZoneCountry,
+      district: "",
+      subdistrict: "",
+      zipCode: "",
     });
 
     if (countryId) {
@@ -354,8 +351,14 @@ const CreateProjectModal = ({
         .map((p) => ({
           value: p.name,
           label: p.name,
+          key: p.id,
         }));
       setOptionsProvince(countryProvinces);
+      const timeZoneCountry = selectedCountry?.timezones?.[0]?.zoneName || "";
+      setTimezone(timeZoneCountry);
+      projectForm.setFieldsValue({
+        timeZone: timeZoneCountry,
+      });
     }
   };
 
@@ -382,9 +385,10 @@ const CreateProjectModal = ({
         .map((d) => ({
           value: d.name,
           label: d.name,
-          key: d.id,
+          key: `${d.id} + ${d.name}`,
         }));
       setOptionsDistrict(provinceDistrict);
+      console.log(provinceDistrict);
     }
   };
 
@@ -523,8 +527,7 @@ const CreateProjectModal = ({
   const onFinishPayForm = async (values: PaymentUpdate) => {
     try {
       if (!licenseId) {
-        console.error("License ID is missing - cannot proceed with payment");
-        message.error("License ID is missing, please try again from step 2");
+        message.error("License ID is missing, please try again");
         return;
       }
 
@@ -548,6 +551,12 @@ const CreateProjectModal = ({
       setCurrentStep(initialStep);
       setProjectId(useProjectId || null);
       setLicenseId(useLicenseId || null);
+      // set success payment page to false
+      setIsSuccessPayment(false);
+      // reset upload slip preview
+      setPreviewProofPayment("");
+      // reset form file upload slip
+      payForm.resetFields(["file"]);
       if (initialStep === 1) {
         mapCoordsRef.current = DEFAULT_CENTER;
         setHasPickedLocation(false);
@@ -568,7 +577,8 @@ const CreateProjectModal = ({
           onFinish={onFinishProject}
           onFinishFailed={() => {
             console.log("FINISHED FAILED");
-          }}>
+          }}
+        >
           <Row gutter={20} style={{ paddingInline: "12px" }}>
             <Col span={6}>
               <Form.Item label="Project name" name="name" rules={requiredRule}>
@@ -584,7 +594,8 @@ const CreateProjectModal = ({
                 name="projectTypeId"
                 rules={[
                   { required: true, message: "Please select project type!" },
-                ]}>
+                ]}
+              >
                 <Radio.Group
                   size="middle"
                   onChange={onChange}
@@ -595,7 +606,8 @@ const CreateProjectModal = ({
                     justifyContent: "space-between",
                     flexWrap: "wrap",
                     rowGap: 10,
-                  }}>
+                  }}
+                >
                   {typeData?.map((item: any, index: number) => (
                     <Radio key={index} value={item.id}>
                       {item.nameEn}
@@ -637,7 +649,8 @@ const CreateProjectModal = ({
                     required: true,
                     message: "Please input country!",
                   },
-                ]}>
+                ]}
+              >
                 <Select
                   value={countryValue}
                   options={optionCountry}
@@ -656,13 +669,13 @@ const CreateProjectModal = ({
                 label="timezone"
                 name="timeZone"
                 rules={requiredRule}
-                hidden>
+                hidden
+              >
                 <Input
                   size="middle"
                   maxLength={60}
                   showCount
                   value={timezone}
-                  readOnly
                 />
               </Form.Item>
               <Form.Item
@@ -673,7 +686,8 @@ const CreateProjectModal = ({
                     required: true,
                     message: "Please select province!",
                   },
-                ]}>
+                ]}
+              >
                 <Select
                   value={provinceValue}
                   options={optionsProvince}
@@ -697,7 +711,8 @@ const CreateProjectModal = ({
                     required: true,
                     message: "Please select district!",
                   },
-                ]}>
+                ]}
+              >
                 <Select
                   value={districtValue}
                   options={optionsDistrict}
@@ -721,13 +736,15 @@ const CreateProjectModal = ({
                     required: true,
                     message: "Please input sub-district!",
                   },
-                ]}>
+                ]}
+              >
                 <Input size="middle" placeholder="Please input sub-district" />
               </Form.Item>
               <Form.Item
                 label="Postal code"
                 name="zipCode"
-                rules={requiredRule}>
+                rules={requiredRule}
+              >
                 <Input
                   size="middle"
                   placeholder="Please input postal code"
@@ -738,7 +755,8 @@ const CreateProjectModal = ({
               <Form.Item
                 label="Juristic phone number"
                 name="contactNumber"
-                rules={telRule}>
+                rules={telRule}
+              >
                 <Input
                   size="middle"
                   placeholder="Please input juristic phone"
@@ -749,7 +767,7 @@ const CreateProjectModal = ({
             </Col>
             <Col span={6}>
               <Form.Item
-                label="Project image"
+                label="Project image (App cover)"
                 name="image"
                 valuePropName="value"
                 rules={[
@@ -757,7 +775,8 @@ const CreateProjectModal = ({
                     required: true,
                     message: "Please upload project image!",
                   },
-                ]}>
+                ]}
+              >
                 <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
               </Form.Item>
               <Form.Item
@@ -769,7 +788,8 @@ const CreateProjectModal = ({
                     required: true,
                     message: "Please upload logo project!",
                   },
-                ]}>
+                ]}
+              >
                 <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
               </Form.Item>
             </Col>
@@ -793,7 +813,8 @@ const CreateProjectModal = ({
                       return Promise.resolve();
                     },
                   },
-                ]}>
+                ]}
+              >
                 {MapElement}
                 {hasPickedLocation && (
                   <div style={{ marginTop: 12, fontSize: 12, color: "#333" }}>
@@ -816,7 +837,8 @@ const CreateProjectModal = ({
                       borderColor: "var(--secondary-color)",
                       marginRight: 12,
                     }}
-                    disabled={savingProject}>
+                    disabled={savingProject}
+                  >
                     Cancel
                   </Button>
                   {/* ถ้า SmallButton ของคุณรองรับ loading ก็ใส่ loading={savingProject} ได้ */}
@@ -834,6 +856,34 @@ const CreateProjectModal = ({
     );
   };
 
+  const handleOptionalChange = (values: string[]) => {
+    // Get all optional features
+    const optionalFeatures = featuresData?.optional || [];
+
+    // Filter children that have a parent bundle
+    const filteredValues = values.filter((id: string) => {
+      const feature = optionalFeatures.find((f: any) => f.id === id);
+
+      if (!feature) return true;
+
+      // Find parents of this feature (if it's a child)
+      const parentBundles = optionalFeatures.flatMap(
+        (f: any) =>
+          f.featureBundles?.filter((b: any) => b.bundleFeaturesId === id) || []
+      );
+
+      const requiredParents = parentBundles.map((b: any) => b.featuresId);
+
+      // Keep if no parent required OR at least one parent is checked
+      return (
+        requiredParents.length === 0 ||
+        requiredParents.some((pid: string) => values.includes(pid))
+      );
+    });
+
+    setCheckedFeatureValues(filteredValues);
+  };
+
   //Content Step 2: Select Package
   const PackageForm = () => {
     return (
@@ -846,7 +896,8 @@ const CreateProjectModal = ({
         onFinish={onFinishSelectedPackage}
         onFinishFailed={() => {
           console.log("FINISHED FAILED");
-        }}>
+        }}
+      >
         {/* Hidden fields for pricing & features */}
         <Form.Item name="standardBasePrice" hidden>
           <Input />
@@ -883,7 +934,8 @@ const CreateProjectModal = ({
                 <Card style={{ marginBottom: 12 }}>
                   <Typography.Title
                     level={4}
-                    style={{ color: "var(--primary-color)" }}>
+                    style={{ color: "var(--primary-color)" }}
+                  >
                     Standard package
                   </Typography.Title>
                   <Text type="secondary">
@@ -894,11 +946,13 @@ const CreateProjectModal = ({
                   <Form.Item
                     name="standardPackage"
                     style={{ marginTop: 24 }}
-                    initialValue={checkedStandardValues}>
+                    initialValue={checkedStandardValues}
+                  >
                     <Checkbox.Group
                       style={{ width: "100%" }}
                       value={checkedStandardValues}
-                      onChange={handleStandardChange}>
+                      onChange={handleStandardChange}
+                    >
                       <Row gutter={10}>
                         {featuresData?.standard?.map(
                           (item: FeaturesDataType, index: number) => {
@@ -915,7 +969,8 @@ const CreateProjectModal = ({
                                     borderColor: isChecked
                                       ? "var(--secondary-color)"
                                       : "#EBEBEB",
-                                  }}>
+                                  }}
+                                >
                                   {item.name}
                                 </Checkbox>
                               </Col>
@@ -930,7 +985,8 @@ const CreateProjectModal = ({
                 <Card style={{ marginBottom: 12 }}>
                   <Typography.Title
                     level={4}
-                    style={{ color: "var(--primary-color)" }}>
+                    style={{ color: "var(--primary-color)" }}
+                  >
                     Optional features
                   </Typography.Title>
                   <Text type="secondary">
@@ -940,29 +996,52 @@ const CreateProjectModal = ({
                   <Form.Item name="optionalFeature" style={{ marginTop: 24 }}>
                     <Checkbox.Group
                       value={checkedFeatureValues}
-                      onChange={setCheckedFeatureValues}>
+                      onChange={handleOptionalChange}
+                      className="optionalFeature"
+                    >
                       <Row gutter={10}>
                         {featuresData?.optional?.map(
                           (item: any, index: number) => {
+                            const parentBundles =
+                              featuresData?.optional?.flatMap(
+                                (f: any) =>
+                                  f.featureBundles?.filter(
+                                    (b: any) => b.bundleFeaturesId === item.id
+                                  ) || []
+                              );
+
+                            const requiredParents = parentBundles.map(
+                              (b: any) => b.featuresId
+                            );
+
+                            const isParentChecked =
+                              requiredParents.length === 0 ||
+                              requiredParents.some((pid: string) =>
+                                checkedFeatureValues.includes(pid)
+                              );
+
                             return (
                               <Col span={12} key={index}>
                                 <Checkbox
                                   value={item.id}
                                   className="packageBoxCustom"
+                                  disabled={!isParentChecked}
                                   style={{
                                     borderColor: checkedFeatureValues.includes(
                                       item.id
                                     )
                                       ? "var(--secondary-color)"
                                       : "#EBEBEB",
-                                  }}>
+                                  }}
+                                >
                                   <div
                                     style={{
                                       width: "100%",
                                       display: "flex",
                                       justifyContent: "space-between",
                                       alignItems: "center",
-                                    }}>
+                                    }}
+                                  >
                                     <span>{item.name}</span>
                                     <span
                                       style={{
@@ -975,7 +1054,8 @@ const CreateProjectModal = ({
                                           checkedFeatureValues.includes(item.id)
                                             ? 600
                                             : 300,
-                                      }}>
+                                      }}
+                                    >
                                       {Number(item.price).toLocaleString()}
                                     </span>
                                   </div>
@@ -1018,7 +1098,8 @@ const CreateProjectModal = ({
                     width: 200,
                     borderColor: "var(--secondary-color)",
                     marginRight: 12,
-                  }}>
+                  }}
+                >
                   Skip
                 </Button>
                 <SmallButton
@@ -1046,13 +1127,15 @@ const CreateProjectModal = ({
         onFinish={onFinishPayForm}
         onFinishFailed={() => {
           console.log("FINISHED FAILED");
-        }}>
+        }}
+      >
         <Row gutter={20} style={{ paddingInline: "12px" }}>
           <Col span={14}>
             <Card style={{ marginBottom: 12 }}>
               <Typography.Title
                 level={4}
-                style={{ color: "var(--primary-color)" }}>
+                style={{ color: "var(--primary-color)" }}
+              >
                 Bank transfer
               </Typography.Title>
               <Divider />
@@ -1070,7 +1153,8 @@ const CreateProjectModal = ({
               <Divider />
               <Typography.Title
                 level={5}
-                style={{ color: "var(--primary-color)", marginBottom: 12 }}>
+                style={{ color: "var(--primary-color)", marginBottom: 12 }}
+              >
                 Upload proof of payment
               </Typography.Title>
               <Form.Item
@@ -1080,7 +1164,8 @@ const CreateProjectModal = ({
                     required: true,
                     message: "Please upload proof of payment!",
                   },
-                ]}>
+                ]}
+              >
                 <UploadImagePayment
                   onChange={(url) => {
                     setPreviewProofPayment(url);
@@ -1102,7 +1187,8 @@ const CreateProjectModal = ({
                       onClick={handleDeleteProofPayment}
                       style={{
                         color: "var(--danger-color)",
-                      }}>
+                      }}
+                    >
                       Change image
                     </Button>
                   </Flex>
@@ -1132,7 +1218,8 @@ const CreateProjectModal = ({
                     borderColor: "var(--secondary-color)",
                     marginRight: 12,
                   }}
-                  onClick={onSkipPaymentForm}>
+                  onClick={onSkipPaymentForm}
+                >
                   Skip
                 </Button>
                 <SmallButton
@@ -1155,7 +1242,8 @@ const CreateProjectModal = ({
         vertical={true}
         justify="center"
         align="center"
-        style={{ padding: 24, marginBottom: 48 }}>
+        style={{ padding: 24, marginBottom: 48 }}
+      >
         <Flex
           style={{
             width: 200,
@@ -1166,7 +1254,8 @@ const CreateProjectModal = ({
             marginBottom: 24,
           }}
           justify="center"
-          align="center">
+          align="center"
+        >
           <img src={successPaymentImage} style={{ width: "80%" }} />
         </Flex>
         <Typography.Title level={4} style={{ color: "#002C55" }}>
@@ -1176,7 +1265,8 @@ const CreateProjectModal = ({
           vertical={true}
           justify="center"
           align="center"
-          style={{ marginBottom: 24 }}>
+          style={{ marginBottom: 24 }}
+        >
           <Text style={{ color: "#002C55" }}>
             Your payment slip has been submitted.
           </Text>
@@ -1201,7 +1291,8 @@ const CreateProjectModal = ({
             setCheckedFeatureValues([]);
             mapCoordsRef.current = DEFAULT_CENTER;
             setHasPickedLocation(false);
-          }}>
+          }}
+        >
           Go to dashboard
         </Button>
       </Flex>
@@ -1262,7 +1353,6 @@ const CreateProjectModal = ({
       cancelMessage: "Cancel",
       onOk: async () => {
         console.log(value);
-        // onCreateInvoicePackage();
         projectForm.resetFields();
         setIsSuccessPayment(false);
         setLicenseId(null);
@@ -1334,7 +1424,8 @@ const CreateProjectModal = ({
             span={24}
             style={{
               justifyItems: "center",
-            }}>
+            }}
+          >
             <h4 style={{ color: "var(--primary-color)", fontSize: "18px" }}>
               {steps[currentStep - 1]?.title}
             </h4>

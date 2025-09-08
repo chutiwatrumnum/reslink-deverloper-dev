@@ -94,22 +94,22 @@ export const useEditProjectManagementMutation = () => {
       try {
         const endpoint = `/project/${id}/developer/dashboard`;
         const apiPayload = {
-          projectTypeId: payload.projectTypeId?.toString(),
+          projectTypeId: payload.projectTypeId,
           name: payload.name,
           image: payload.image,
           logo: payload.logo,
           lat: payload.lat,
           long: payload.long,
           contactNumber: payload.contactNumber,
-          email: payload.email,
           country: payload.country,
           province: payload.province,
           district: payload.district,
           subdistrict: payload.subdistrict,
-          road: payload.road || "",
+          road: payload.road,
           subStreet: payload.subStreet || "",
           address: payload.address,
           zipCode: payload.zipCode,
+          timeZone: payload.timeZone
         };
         console.log("API Payload update project:", apiPayload);
         const response = await axios.put(endpoint, apiPayload);

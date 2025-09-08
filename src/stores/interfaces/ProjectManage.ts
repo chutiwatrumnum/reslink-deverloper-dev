@@ -146,11 +146,11 @@ export type ProjectManagementCreatePayload = {
 
 export type ProjectManagementUpdatePayload = {
   name: string;
-  image: string;
-  logo: string;
+  image: string | null;
+  logo: string | null;
   active?: boolean;
-  lat: string | number;
-  long: string | number;
+  lat: string | number | undefined;
+  long: string | number | undefined;
   projectTypeId?: string | number;
   vmsUrl?: string;
   vmsUsername?: string;
@@ -165,7 +165,14 @@ export type ProjectManagementUpdatePayload = {
   zipCode: string | number;
   road?: string;
   subStreet?: string;
+  timeZone?: string;
+  type?: {
+    id?: number;
+    nameTh?: number;
+    nameEn?: number;
+  }
 };
+
 export interface ProjectFromDataType {
   projectTypeId?: number;
   id?: string;
@@ -205,6 +212,7 @@ export interface ProjectManagementParams {
 }
 
 export interface ProjectManageType {
+  statusDisplay?: string;
   projectTypeId?: string;
   key?: string;
   id?: string;
@@ -227,6 +235,7 @@ export interface ProjectManageType {
   address?: string;
   zipCode?: string | number;
   type?: {
+    id?: number;
     nameTh?: string;
     nameEn?: string;
   };
@@ -242,6 +251,8 @@ export interface ProjectManageType {
       name?: string;
     };
   };
+  timeZone?: string
+  country?: string
 }
 
 export interface ProjectManagementState {
@@ -287,7 +298,7 @@ interface Feature {
   code: string;
   name: string;
   type: string;
-  price: string;
+  price: number;
 }
 // Type for invoice
 export type FeatureKind = "standard" | "optional";

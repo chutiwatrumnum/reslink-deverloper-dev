@@ -18,34 +18,40 @@ import {
   Modal,
   Collapse,
   Empty,
+  Skeleton,
+  Space,
+  Spin,
 } from "antd";
 import CreateProjectModal from "../components/modals/CreateProjectModal";
 import EditProjectModal from "../components/modals/EditProjectModal";
 import { callConfirmModal } from "../../../components/common/Modal";
 // Types
-import type { TabsProps } from "antd";
+import type { TabsProps, CollapseProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 // Data & APIs
-import type {
-  ProjectFromDataType,
-  ProjectManageType,
-  ProjectResponse,
-} from "../../../stores/interfaces/ProjectManage";
+import type { ProjectManageType } from "../../../stores/interfaces/ProjectManage";
 // Icons
 import {
   EditOutlined,
   InfoCircleOutlined,
   DeleteOutlined,
   PictureOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  ContainerOutlined,
+  CheckCircleFilled,
 } from "@ant-design/icons";
 // APIs & Data
 import {
   useProjectManagementQuery,
   useProjectByIdQuery,
-  useFeaturesByProjectIdQuery,
+  useFeatureByProjectIdQuery,
   useFeaturesAndProjectByIdQuery,
 } from "../../../utils/queriesGroup/projectManagementQueries";
 import { useDeleteProjectManagementMutation } from "../../../utils/mutationsGroup/projectManagement";
+import "../styles/projectManagement.css";
 
 const ProjectManagement = () => {
   const { perPage, pageSizeOptions } = usePagination({
@@ -58,9 +64,8 @@ const ProjectManagement = () => {
   const [unapprovedPage, setUnapprovedPage] = useState(1);
   const [search, setSearch] = useState<string>("");
 
-  const [selectedInfo, setSelectedInfo] = useState<ProjectResponse | null>(
-    null
-  );
+  const [selectedRecord, setSelectedRecord] =
+    useState<ProjectManageType | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<
     string | number | null
   >(null);
@@ -131,28 +136,26 @@ const ProjectManagement = () => {
     }
   };
 
-  const [dataEdit, setDataEdit] = useState();
-
   // Mutations
   const deleteMutation = useDeleteProjectManagementMutation();
 
-  const { data: projectByIdData } = useProjectByIdQuery(
-    selectedProjectId?.toString()
-  );
-  const { data: featuresByProjectId } = useFeaturesByProjectIdQuery(
-    selectedProjectId?.toString()
-  );
-  const { data: featureAndProjectById } = useFeaturesAndProjectByIdQuery(
-    selectedProjectId?.toString()
-  );
+  const { data: featureByProjectId, isLoading: infoLoading } =
+    useFeatureByProjectIdQuery(selectedRecord?.id?.toString());
 
-  const dataById = projectByIdData || selectedInfo;
-  const dataFeatureByProjectId = featuresByProjectId || selectedInfo;
+  const licenseData = featureByProjectId || [];
 
-  const projectData = featureAndProjectById?.project || selectedInfo;
-  const licenseData = featureAndProjectById?.licenses || selectedInfo;
+  // Access the first license (most common case)
+  const primaryLicense = licenseData[0];
+
+  // const dataById = projectByIdData || selectedInfo;
+  // const dataFeatureByProjectId = featuresByProjectId || selectedInfo;
+
+  // const projectData = featureAndProjectById?.project || selectedInfo;
+  // const licenseData = featureAndProjectById?.licenses || selectedInfo;
 
   const [currentStep, setCurrentStep] = useState<number>(1);
+
+  const [dataEdit, setDataEdit] = useState<ProjectManageType>();
 
   // Modal states
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
@@ -202,19 +205,18 @@ const ProjectManagement = () => {
   };
 
   // 🪧📋 Info project Modal
-  const onInfo = (record: ProjectResponse) => {
-    setSelectedInfo(record);
-    setSelectedProjectId(String(record.project?.id));
+  const onInfo = (record: ProjectManageType) => {
+    setSelectedRecord(record);
+    // setSelectedProjectId(String(record.project?.id));
     setIsInfoProjectModalOpen(true);
   };
   const onInfoCancel = () => {
     setIsInfoProjectModalOpen(false);
-    setSelectedInfo(null);
-    setSelectedProjectId(null);
+    setSelectedRecord(null);
   };
 
   // 🪧🖋️ Edit project form Modal
-  const onEditProject = async (data: any) => {
+  const onEditProject = async (data: ProjectManageType) => {
     setDataEdit(data);
     setIsEditProjectModalOpen(true);
   };
@@ -237,20 +239,21 @@ const ProjectManagement = () => {
 
   const onContinue = (record: ProjectManageType) => {
     const projectId = record.id;
-    const licenses = featureAndProjectById?.result?.licenses || [];
-    const license = licenses.find((i) => i.projectId === projectId);
-
+    // const licenses = featureAndProjectById?.result?.licenses || [];
+    // const license = licenses.find((i) => i.projectId === projectId);
+    const licId = record?.licenseId ?? null;
     if (!projectId) {
       message.error("Project ID not found");
       return;
     }
 
     if (record.status?.nameCode === "waiting_payment") {
-      if (!license) {
-        message.error("License not found for this project");
+      if (!licId) {
+        message.error("no license pending payment");
         return;
       }
-      setLicenseId(license.licenseId.toString());
+      // setLicenseId(license.licenseId.toString());
+      setLicenseId(licId);
       setCurrentStep(3);
     } else if (record.status?.nameCode === "draft_project") {
       setProjectId(projectId.toString());
@@ -270,8 +273,6 @@ const ProjectManagement = () => {
     const url = `https://www.google.com/maps?q=${lat},${lng}`;
     window.open(url, "_blank");
   };
-
-  // const onPackageContinue = (id, currentStep) => {};
 
   const showDeleteUnverifiedConfirm = (record: ProjectManageType) => {
     callConfirmModal({
@@ -378,37 +379,44 @@ const ProjectManagement = () => {
     },
     {
       title: "Status",
-      key: "status",
-      dataIndex: "status",
+      key: "statusDisplay",
+      dataIndex: "statusDisplay",
       align: "center",
       render: (_, record) => {
-        let color = "#fff";
-        let backgroundColor = "#fff";
-        let text = record?.status?.nameCode;
-        const status = record?.status?.nameCode;
-        if (status === "activated") {
+        let color = "";
+        let backgroundColor = "";
+        let text = "";
+        let icon = <CheckCircleOutlined />;
+        const status = record?.statusDisplay;
+        if (status === "Activated") {
           color = "#38BE43";
           backgroundColor = "#E6F9E6";
           text = "Activated";
-        } else if (status === "draft_project") {
-          color = "#D73232";
-          backgroundColor = "#FFE3E3";
-          text = "Draft Project";
-        } else if (status === "pending") {
+          icon = <CheckCircleOutlined />;
+        } else if (status === "Draft project") {
+          color = "#34495d";
+          backgroundColor = "#f6f6f6";
+          text = "Draft project";
+          icon = <ContainerOutlined />;
+        } else if (status === "Pending activate") {
           color = "#ECA013";
           backgroundColor = "#FFF7DA";
           text = "Pending";
-        } else if (status === "waiting_payment") {
+          icon = <ExclamationCircleOutlined />;
+        } else if (status === "Waiting for payment") {
           color = "#d4380d";
           backgroundColor = "#fff2e8";
           text = "Waiting for payment";
-        } else if (status === "expired") {
+          icon = <ClockCircleOutlined />;
+        } else if (status === "inactive") {
           color = "#D73232";
           backgroundColor = "#FFE3E3";
-          text = "Expired";
+          text = "Inactive";
+          icon = <CloseCircleOutlined />;
         }
         return (
           <Tag
+            icon={icon}
             style={{
               color,
               backgroundColor,
@@ -430,11 +438,11 @@ const ProjectManagement = () => {
         const fullName = `${record?.createdBy?.givenName} ${record?.createdBy?.familyName}`;
         return (
           <Flex vertical={true}>
-            <p style={{ margin: 0 }}>
-              <span>{fullName === null || "" ? fullName : "-"}</span>
+            <p style={{ margin: 0, textTransform: "capitalize" }}>
+              <span>{fullName || "-"}</span>
             </p>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {record?.createdBy?.role?.name || ""}
+              {record?.createdBy?.role?.name || "-"}
             </Text>
           </Flex>
         );
@@ -465,7 +473,7 @@ const ProjectManagement = () => {
       align: "center",
       render: (_, record) => {
         const active = record?.active;
-        const status = record?.status?.nameCode;
+        const status = record?.statusDisplay;
         if (active === true) {
           return (
             <Tag
@@ -480,9 +488,24 @@ const ProjectManagement = () => {
             </Tag>
           );
         }
+        // if (active === false) {
+        //   return (
+        //     <Tag
+        //       style={{
+        //         color: "#D73232",
+        //         backgroundColor: "#FFE3E3",
+        //         borderColor: "#D73232",
+        //         margin: 0,
+        //       }}
+        //       // icon={<CloseCircleOutlined />}
+        //     >
+        //       Inactive
+        //     </Tag>
+        //   );
+        // }
         switch (status) {
-          case "draft_project":
-          case "waiting_payment":
+          case "Draft project":
+          case "Waiting for payment":
             return (
               <Button
                 size="small"
@@ -493,7 +516,7 @@ const ProjectManagement = () => {
                 Continue
               </Button>
             );
-          case "pending":
+          case "Pending activate":
             return (
               <Button
                 size="small"
@@ -504,7 +527,7 @@ const ProjectManagement = () => {
                 Continue
               </Button>
             );
-          case "expired":
+          case "Expired":
             return (
               <Tag
                 style={{
@@ -567,26 +590,30 @@ const ProjectManagement = () => {
 
   const getStatusStyle = (status: string) => {
     const statusMap: any = {
-      activated: {
+      Activated: {
         color: "#38BE43",
         backgroundColor: "#E6F9E6",
         text: "Activated",
       },
-      draft_project: {
-        color: "#D73232",
-        backgroundColor: "#FFE3E3",
+      "Draft Project": {
+        color: "#34495d",
+        backgroundColor: "#FFF7DA",
         text: "Draft Project",
       },
-      pending: {
-        // Updated to match API
+      "Pending activated": {
         color: "#ECA013",
         backgroundColor: "#FFF7DA",
         text: "Pending",
       },
-      waiting_payment: {
+      "Waiting for payment": {
         color: "#d4380d",
         backgroundColor: "#fff2e8",
         text: "Waiting for payment",
+      },
+      inactive: {
+        color: "#D73232",
+        backgroundColor: "#FFE3E3",
+        text: "Inactive",
       },
     };
 
@@ -598,24 +625,7 @@ const ProjectManagement = () => {
       }
     );
   };
-
-  // Then use it in your JSX:
-  const statusStyle = getStatusStyle(dataById?.status?.nameCode);
-
-  // const filteredData =
-  //   projectData?.rows?.filter((project) => {
-  //     const status = project?.status?.nameCode;
-  //     if (isApproved) {
-  //       return status === "activated";
-  //     } else {
-  //       return (
-  //         status === "draft_project" ||
-  //         status === "pending" ||
-  //         status === "waiting_payment"
-  //       );
-  //     }
-  //   }) || [];
-
+  const statusStyle = getStatusStyle(selectedRecord?.statusDisplay);
   return (
     <>
       <Header title="Project management" />
@@ -668,6 +678,7 @@ const ProjectManagement = () => {
         onCancel={onCreateCancel}
         onRefresh={onRefresh}
         projectId={projectId}
+        licenseId={licenseId}
         initialStep={currentStep}
       />
       {/* Edit project form Modal */}
@@ -679,245 +690,348 @@ const ProjectManagement = () => {
         onRefresh={onRefresh}
       />
       <Modal
-        width={"80%"}
+        width={"85%"}
         open={isInfoProjectModalOpen}
         onCancel={onInfoCancel}
         title="Information"
         footer={false}
         centered={true}
+        style={{
+          maxHeight: "90vh",
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
       >
-        {projectData ? (
-          <Row gutter={24} style={{ marginTop: 24 }}>
-            {/* Image and Logo Info */}
-            <Col span={4}>
-              <Flex vertical={true} gap={6} style={{ marginBottom: 16 }}>
-                <Text strong>Project image</Text>
-                {!projectData?.image ? (
-                  <Flex
-                    style={{
-                      backgroundColor: "#f5f5f5",
-                      borderRadius: 8,
-                      width: "100%",
-                      height: 140,
-                    }}
-                    justify="center"
-                    align="center"
-                  >
-                    <PictureOutlined
-                      style={{ fontSize: 36, color: "#bfbfbf" }}
-                    />
-                  </Flex>
-                ) : (
-                  <>
-                    <Image
-                      height={"100%"}
-                      src={projectData?.image}
+        {selectedRecord && (
+          <div
+            style={{
+              maxHeight: "75vh",
+              overflowY: "auto",
+            }}
+          >
+            <Row gutter={24} style={{ marginTop: 24 }}>
+              {/* Image and Logo Info */}
+              <Col span={4}>
+                <Flex vertical={true} gap={6} style={{ marginBottom: 16 }}>
+                  <Text strong>Project image</Text>
+                  {!selectedRecord?.image ? (
+                    <Flex
                       style={{
-                        objectFit: "contain",
+                        backgroundColor: "#f5f5f5",
                         borderRadius: 8,
-                        border: "1px solid #C6C8C9",
+                        width: "100%",
+                        height: 140,
                       }}
-                    />
-                  </>
-                )}
-              </Flex>
-              <Flex vertical={true} gap={6}>
-                <Text strong>Logo project</Text>
-                {!projectData?.logo ? (
-                  <Flex
-                    style={{
-                      backgroundColor: "#f5f5f5",
-                      borderRadius: 8,
-                      width: "100%",
-                      height: 140,
-                    }}
-                    justify="center"
-                    align="center"
-                  >
-                    <PictureOutlined
-                      style={{ fontSize: 36, color: "#bfbfbf" }}
-                    />
-                  </Flex>
-                ) : (
-                  <>
-                    <Image
-                      height={"100%"}
-                      src={projectData?.logo}
+                      justify="center"
+                      align="center"
+                    >
+                      <PictureOutlined
+                        style={{ fontSize: 36, color: "#bfbfbf" }}
+                      />
+                    </Flex>
+                  ) : (
+                    <>
+                      <Image
+                        height={"100%"}
+                        src={selectedRecord?.image}
+                        style={{
+                          objectFit: "contain",
+                          borderRadius: 8,
+                          border: "1px solid #C6C8C9",
+                        }}
+                      />
+                    </>
+                  )}
+                </Flex>
+                <Flex vertical={true} gap={6}>
+                  <Text strong>Logo project</Text>
+                  {!selectedRecord?.logo ? (
+                    <Flex
                       style={{
-                        objectFit: "contain",
+                        backgroundColor: "#f5f5f5",
                         borderRadius: 8,
-                        border: "1px solid #C6C8C9",
+                        width: "100%",
+                        height: 140,
                       }}
-                    />
-                  </>
-                )}
-              </Flex>
-            </Col>
-            {/* Text Info */}
-            <Col span={10}>
-              <Row style={{ marginBottom: 6 }}>
-                <Col span={24}>
-                  <Text style={{ fontWeight: 600 }}>Project information</Text>
-                </Col>
-              </Row>
-              <Row
-                style={{
-                  border: "1px solid #C6C8C9",
-                  borderRadius: 8,
-                  padding: 12,
-                }}
-              >
-                <Col span={24}>
-                  <Row gutter={8} style={{ marginBottom: 24 }}>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Project name</Text>
-                        <Text>{projectData?.name || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Road</Text>
-                        <Text>{projectData?.road || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Email</Text>
-                        <Text></Text>
-                      </Flex>
-                    </Col>
-                  </Row>
-                  <Row gutter={8} style={{ marginBottom: 24 }}>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Project type</Text>
-                        <Text>{projectData?.type?.nameEn || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Soi</Text>
-                        <Text>{projectData?.subStreet || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Map</Text>
-                        {projectData?.lat && projectData?.long && (
-                          <Button
-                            size="small"
-                            type="link"
-                            onClick={() =>
-                              onViewMap(projectData?.lat, projectData?.long)
-                            }
+                      justify="center"
+                      align="center"
+                    >
+                      <PictureOutlined
+                        style={{ fontSize: 36, color: "#bfbfbf" }}
+                      />
+                    </Flex>
+                  ) : (
+                    <>
+                      <Image
+                        height={"100%"}
+                        src={selectedRecord?.logo}
+                        style={{
+                          objectFit: "contain",
+                          borderRadius: 8,
+                          border: "1px solid #C6C8C9",
+                        }}
+                      />
+                    </>
+                  )}
+                </Flex>
+              </Col>
+              {/* Text Info */}
+              <Col span={9}>
+                <Row style={{ marginBottom: 6 }}>
+                  <Col span={24}>
+                    <Text style={{ fontWeight: 600 }}>Project information</Text>
+                  </Col>
+                </Row>
+                <Row
+                  style={{
+                    border: "1px solid #C6C8C9",
+                    borderRadius: 8,
+                    padding: 12,
+                  }}
+                >
+                  <Col span={24}>
+                    <Row gutter={8} style={{ marginBottom: 24 }}>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Project name</Text>
+                          <Text>{selectedRecord?.name || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Country</Text>
+                          <Text>{selectedRecord?.country || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Phone</Text>
+                          <Text>{selectedRecord?.contactNumber || "-"}</Text>
+                        </Flex>
+                      </Col>
+                    </Row>
+                    <Row gutter={8} style={{ marginBottom: 24 }}>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Project type</Text>
+                          <Text>{selectedRecord?.type?.nameEn || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Province</Text>
+                          <Text>{selectedRecord?.province || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Map</Text>
+                          {selectedRecord?.lat && selectedRecord?.long && (
+                            <Button
+                              size="small"
+                              type="link"
+                              onClick={() =>
+                                onViewMap(
+                                  selectedRecord?.lat,
+                                  selectedRecord?.long
+                                )
+                              }
+                              style={{
+                                border: `1px solid var(--secondary-color)`,
+                                fontSize: 12,
+                                padding: "2px 8px",
+                              }}
+                            >
+                              View Map
+                            </Button>
+                          )}
+                        </Flex>
+                      </Col>
+                    </Row>
+                    <Row gutter={8} style={{ marginBottom: 24 }}>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Address</Text>
+                          <Text>{selectedRecord?.address || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>District</Text>
+                          <Text>{selectedRecord.district || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Status</Text>
+                          <Tag
                             style={{
-                              border: `1px solid var(--secondary-color)`,
-                              fontSize: 12,
-                              padding: "2px 8px",
+                              color: statusStyle.color,
+                              backgroundColor: statusStyle.backgroundColor,
+                              borderColor: statusStyle.color,
+                              textAlign: "center",
+                              margin: 0,
+                              padding: 2,
                             }}
                           >
-                            View Map
-                          </Button>
-                        )}
-                      </Flex>
-                    </Col>
-                  </Row>
-                  <Row gutter={8} style={{ marginBottom: 24 }}>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Province</Text>
-                        <Text>{projectData.project?.province || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Address</Text>
-                        <Text>{projectData.project?.address || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Status</Text>
-                        <Tag
-                          style={{
-                            color: statusStyle.color,
-                            backgroundColor: statusStyle.backgroundColor,
-                            borderColor: statusStyle.color,
-                            textAlign: "center",
-                            margin: 0,
-                          }}
-                        >
-                          {statusStyle.text}
-                        </Tag>
-                      </Flex>
-                    </Col>
-                  </Row>
-                  <Row gutter={8} style={{ marginBottom: 24 }}>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>District</Text>
-                        <Text>{projectData?.district || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Postal code</Text>
-                        <Text>{projectData?.zipCode || "-"}</Text>
-                      </Flex>
-                    </Col>
-                  </Row>
-                  <Row gutter={8}>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Sub-district</Text>
-                        <Text>{projectData?.subdistrict || "-"}</Text>
-                      </Flex>
-                    </Col>
-                    <Col span={8}>
-                      <Flex vertical={true} gap={6}>
-                        <Text strong>Phone number</Text>
-                        <Text>{projectData?.contactNumber || "-"}</Text>
-                      </Flex>
-                    </Col>
-                  </Row>
-                </Col>
-              </Row>
-            </Col>
-            {/* Standard package and Optional feature preview */}
-            <Col span={10}>
-              <Flex vertical={true} gap={6}>
-                {licenseData ? (
-                  <Text style={{ fontWeight: 600 }}>
+                            {statusStyle.text}
+                          </Tag>
+                        </Flex>
+                      </Col>
+                    </Row>
+                    <Row gutter={8} style={{ marginBottom: 24 }}>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Soi</Text>
+                          <Text>{selectedRecord?.subStreet || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Sub-district</Text>
+                          <Text>{selectedRecord?.subdistrict || "-"}</Text>
+                        </Flex>
+                      </Col>
+                    </Row>
+                    <Row gutter={8}>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Road</Text>
+                          <Text>{selectedRecord?.road || "-"}</Text>
+                        </Flex>
+                      </Col>
+                      <Col span={8}>
+                        <Flex vertical={true} gap={6}>
+                          <Text strong>Postal code</Text>
+                          <Text>{selectedRecord?.zipCode || "-"}</Text>
+                        </Flex>
+                      </Col>
+                    </Row>
+                  </Col>
+                </Row>
+              </Col>
+              {/* Standard package and Optional feature preview */}
+              <Col span={11}>
+                <Flex vertical={true} gap={6} style={{ marginBottom: 6 }}>
+                  <Text strong>
                     Current package:{" "}
-                    {`Standard + ${
-                      licenseData[0]?.optionalFeatureLength || 0
-                    } optional features`}
+                    {infoLoading ? (
+                      <></>
+                    ) : (
+                      `Standard + ${
+                        primaryLicense?.optionalFeatureLength || 0
+                      } optional features`
+                    )}
                   </Text>
-                ) : (
-                  <Text style={{ fontWeight: 600 }}>Current package: 0</Text>
-                )}
-                {dataFeatureByProjectId?.features ? (
-                  <></>
-                ) : (
+                </Flex>
+                {infoLoading ? (
+                  <Spin tip="loading">
+                    <div
+                      style={{
+                        width: "100%",
+                        height: 120,
+                        backgroundColor: "#fafafa",
+                      }}
+                    ></div>
+                  </Spin>
+                ) : licenseData.length === 0 ? (
                   <Flex
-                    justify="center"
-                    align="center"
                     style={{
-                      padding: "50px",
-                      border: "1px solid #C6C8C9",
+                      padding: 48,
+                      width: "100%",
+                      border: "1px solid #c7c9c9",
                       borderRadius: 8,
                     }}
+                    justify="center"
+                    align="center"
                   >
                     <Empty />
                   </Flex>
+                ) : (
+                  // Your existing collapse/feature rendering logic
+                  <Space direction="vertical" style={{ width: "100%" }}>
+                    {/* Standard Features */}
+                    <Collapse
+                      collapsible="header"
+                      defaultActiveKey={["1"]}
+                      items={[
+                        {
+                          key: "1",
+                          label: `Standard (License period: ${
+                            primaryLicense?.features?.standard?.period || "N/A"
+                          })`,
+                          children: (
+                            <Row gutter={[8, 8]}>
+                              {primaryLicense?.features?.standard?.features?.map(
+                                (feature, index) => (
+                                  <Col span={8} key={index}>
+                                    <Flex gap={8} align="center">
+                                      <CheckCircleFilled
+                                        style={{
+                                          color: "var(--success-color)",
+                                        }}
+                                      />
+                                      <Text style={{ margin: 0, fontSize: 12 }}>
+                                        {feature.feature.name}
+                                      </Text>
+                                    </Flex>
+                                  </Col>
+                                )
+                              ) || (
+                                <Col span={24}>
+                                  <Text>No standard features</Text>
+                                </Col>
+                              )}
+                            </Row>
+                          ),
+                        },
+                      ]}
+                    />
+
+                    {/* Optional Features */}
+                    {primaryLicense?.features?.optional?.features &&
+                      primaryLicense.features.optional.features.length > 0 && (
+                        <>
+                          {primaryLicense.features.optional.features.map(
+                            (feature, index) => (
+                              <Collapse
+                                key={index}
+                                items={[
+                                  {
+                                    key: index.toString(),
+                                    label: `Optional (License period: ${feature.startDate} - ${feature.endDate})`,
+                                    children: (
+                                      <Row gutter={[8, 8]}>
+                                        <Col span={24}>
+                                          <Flex gap={8} align="center">
+                                            <CheckCircleFilled
+                                              style={{
+                                                color: "var(--success-color)",
+                                              }}
+                                            />
+                                            <Text
+                                              style={{
+                                                margin: 0,
+                                                fontSize: 12,
+                                              }}
+                                            >
+                                              {feature.feature.name}
+                                            </Text>
+                                          </Flex>
+                                        </Col>
+                                      </Row>
+                                    ),
+                                  },
+                                ]}
+                              />
+                            )
+                          )}
+                        </>
+                      )}
+                  </Space>
                 )}
-              </Flex>
-            </Col>
-          </Row>
-        ) : (
-          <div style={{ textAlign: "center", padding: "50px" }}>
-            <Empty />
+              </Col>
+            </Row>
           </div>
         )}
       </Modal>

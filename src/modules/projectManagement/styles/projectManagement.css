@@ -1,3 +1,8 @@
 .saveButton {
     width: 200px  !important
 }
+
+.ant-collapse-header-text {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}

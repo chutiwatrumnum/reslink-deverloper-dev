@@ -1,35 +1,35 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // Components
-import { Form, Row, Col, Input, Radio, Select, Button, Flex } from "antd";
+import { Form, Row, Col, Input, Radio, Select, Flex, Spin, Button } from "antd";
 import UploadImageWithCrop from "../UploadImageWithCrop";
 import FormModal from "../../../../components/common/FormModal";
 import { callConfirmModal } from "../../../../components/common/Modal";
 import SmallButton from "../../../../components/common/SmallButton";
-import GoogleMapComponent from "../GoogleMapComponent";
 // Types
-import type {
-  ProvinceDataType,
-  DistrictDataType,
+// Types
+import {
   SubDistrictDataType,
-  ProjectFromDataType,
   ProjectManageType,
+  CountryDataTypes,
+  ProvinceDataTypes,
+  DistrictDataTypes,
 } from "../../../../stores/interfaces/ProjectManage";
 import type { RadioChangeEvent } from "antd";
 // Config input rule
-import {
-  requiredRule,
-  emailRule,
-  telRule,
-} from "../../../../configs/inputRule";
+import { requiredRule, telRule } from "../../../../configs/inputRule";
 // APIs & Data
 import { useEditProjectManagementMutation } from "../../../../utils/mutationsGroup/projectManagement";
 import { useProjectTypeQuery } from "../../../../utils/queriesGroup/projectManagementQueries";
+import "../../styles/projectManagement.css";
+
 // JSON
-import provinceData from "../../json/province.json";
-import districtData from "../../json/district.json";
+import countryData from "../../json/countries.json";
+import provinceData from "../../json/states.json";
+import districtData from "../../json/cities.json";
 import subDistrictData from "../../json/subDistrict.json";
 
-import "../../styles/projectManagement.css";
+// Google map
+import GoogleMapComponent from "../GoogleMapComponent";
 
 type EditProjectModalPropsType = {
   data?: ProjectManageType;
@@ -38,6 +38,8 @@ type EditProjectModalPropsType = {
   onCancel: () => void;
   onRefresh: () => void;
 };
+
+const DEFAULT_CENTER = { lat: 13.736717, lng: 100.523186 };
 
 const EditProjectModal = ({
   data,
@@ -48,40 +50,127 @@ const EditProjectModal = ({
 }: EditProjectModalPropsType) => {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
-
-  const [previewImage, setPreviewImage] = useState("");
-  const [previewLogo, setPreviewLogo] = useState("");
-
-  // Configuring Ant Design components
-  const { TextArea } = Input;
+  // ===== Loading ระหว่าง Save =====
+  const [editProject, setEditProject] = useState(false);
 
   // Data Project Type => Condo, Village
   const { data: typeData } = useProjectTypeQuery();
 
   const editMutation = useEditProjectManagementMutation();
 
+  const onFinish = async (value: any) => {
+    callConfirmModal({
+      title: "Request edit project?",
+      message: "Are you sure you want to request the new project?",
+      okMessage: "Save",
+      cancelMessage: "Cancel",
+      onOk: async () => {
+        const formData = {
+          ...value,
+          lat: mapCoordsRef.current.lat,
+          long: mapCoordsRef.current.lng,
+        };
+        if (formData.image === data?.image) {
+          delete formData.image;
+        }
+        if (formData.logo === data?.logo) {
+          delete formData.logo;
+        }
+        try {
+          editMutation
+            .mutateAsync({ id: data?.id ?? "", payload: formData })
+            .then((res) => {
+              console.log(res);
+            });
+          setEditProject(true);
+          onOk();
+          onRefresh();
+        } catch (error: any) {
+          console.log("Edit project failed: ", error);
+        } finally {
+          setEditProject(false);
+        }
+      },
+    });
+  };
+
+  const onModalClose = () => {
+    form.resetFields();
+    setValue(undefined);
+    setCountryValue("");
+    setProvinceValue("");
+    setDistrictValue("");
+    setSubDistrictValue("");
+    setPostalCodeValue("");
+    setTimezone("");
+    setHasPickedLocation(false);
+    mapCoordsRef.current = DEFAULT_CENTER;
+    onCancel();
+  };
+
+  useEffect(() => {
+    setOpen(isEditModalOpen);
+    if (data && isEditModalOpen) {
+      console.log(data);
+      form.setFieldsValue({
+        projectTypeId: data.type?.id?.toString(),
+        name: data.name,
+        image: data.image,
+        logo: data.logo,
+        lat: data.lat,
+        long: data.long,
+        contactNumber: data.contactNumber,
+        email: data.email,
+        country: data.country,
+        province: data.province,
+        district: data.district,
+        subdistrict: data.subdistrict,
+        road: data.road,
+        subStreet: data.subStreet || "",
+        address: data.address,
+        zipCode: data.zipCode,
+        timeZone: data.timeZone,
+      });
+      setCountryValue(data.country || "");
+      setProvinceValue(data.province || "");
+      setDistrictValue(data.district || "");
+      setSubDistrictValue(data.subdistrict || "");
+      setPostalCodeValue(data.zipCode || "");
+      setTimezone(data.timeZone || "");
+
+      // Set map coordinates
+      if (data.lat && data.long) {
+        mapCoordsRef.current = { lat: data.lat, lng: data.long };
+        initialCenterRef.current = { lat: data.lat, lng: data.long };
+        setHasPickedLocation(true);
+      }
+    }
+  }, [isEditModalOpen, data]);
+
+  //State for radio project type values
+  const [value, setValue] = useState<number>();
+
+  const onChange = (e: RadioChangeEvent) => {
+    setValue(Number(e.target.value));
+    console.log("Project type selected: ", e.target.value);
+  };
+
   // ===== Map: no-flicker setup =====
-  const mapCoordsRef = useRef<{ lat: number; lng: number }>({
-    lat: 13.736717,
-    lng: 100.523186,
-  });
-  const initialCenterRef = useRef({ lat: 13.736717, lng: 100.523186 });
+  const mapCoordsRef = useRef<{ lat: number; lng: number }>(DEFAULT_CENTER);
+  const initialCenterRef = useRef(DEFAULT_CENTER);
   const [hasPickedLocation, setHasPickedLocation] = useState(false);
 
   const handleLocationChange = useCallback(
     (lat: number, lng: number) => {
       mapCoordsRef.current = { lat, lng };
-      if (!hasPickedLocation) {
+      if (
+        !hasPickedLocation &&
+        (lat !== DEFAULT_CENTER.lat || lng !== DEFAULT_CENTER.lng)
+      ) {
         setHasPickedLocation(true);
       }
-
-      // อัปเดต form values
-      form.setFieldsValue({
-        lat: lat,
-        long: lng,
-      });
     },
-    [hasPickedLocation, form]
+    [hasPickedLocation]
   );
 
   // สร้าง MapElement แค่ครั้งเดียว (ไม่ re-mount เมื่อ state อื่นเปลี่ยน)
@@ -94,119 +183,34 @@ const EditProjectModal = ({
         height={470}
         width="100%"
         zoom={12}
-        draggableMarker={true}
       />
     ),
     [handleLocationChange]
   );
 
-  const onFinish = async (value: any) => {
-    callConfirmModal({
-      title: "Request edit project?",
-      message: "Are you sure you want to request the new project?",
-      okMessage: "Save",
-      cancelMessage: "Cancel",
-      onOk: async () => {
-        // รวม coordinates จาก mapCoordsRef
-        const payload = {
-          ...value,
-          lat: mapCoordsRef.current.lat,
-          long: mapCoordsRef.current.lng,
-        };
-
-        console.log("Edit payload with coordinates:", payload);
-        editMutation
-          .mutateAsync({ id: data?.id ?? "", payload })
-          .then((res) => {
-            console.log(res);
-          });
-        onOk();
-        onRefresh();
-      },
-    });
-  };
-
-  const onModalClose = () => {
-    form.resetFields();
-    // รีเซ็ต map state
-    mapCoordsRef.current = { lat: 13.736717, lng: 100.523186 };
-    setHasPickedLocation(false);
-    onCancel();
-  };
-
-  useEffect(() => {
-    setOpen(isEditModalOpen);
-  }, [isEditModalOpen]);
-
-  // Set form values when selectedRecord changes
-  useEffect(() => {
-    setOpen(isEditModalOpen);
-    if (data) {
-      // ตั้งค่า coordinates สำหรับ map
-      const lat = Number(data?.lat) || 13.736717;
-      const lng = Number(data?.long) || 100.523186;
-
-      mapCoordsRef.current = { lat, lng };
-      initialCenterRef.current = { lat, lng };
-      setHasPickedLocation(true);
-
-      form.setFieldsValue({
-        projectTypeId: String(data?.projectTypeId),
-        active: data?.active,
-        name: data?.name,
-        image: data?.image,
-        logo: data?.logo,
-        lat: Number(data?.lat),
-        long: Number(data?.long),
-        contactNumber: data?.contactNumber,
-        email: data?.email,
-        province: data?.province,
-        district: data?.district,
-        subdistrict: data?.subdistrict,
-        road: data?.road,
-        subStreet: data?.subStreet,
-        address: data?.address,
-        zipCode: data?.zipCode,
-      });
-    }
-  }, [data, isEditModalOpen, form]);
-
-  useEffect(() => {
-    if (data) {
-      setProvinceValue(data.province || "");
-      setDistrictValue(data.district || "");
-      setSubDistrictValue(data.subdistrict || "");
-      setPostalCodeValue(data.zipCode || "");
-
-      setPreviewImage(data.image || "");
-      setPreviewLogo(data.logo || "");
-      form.setFieldsValue({
-        image: data.image,
-        logo: data.logo,
-      });
-    }
-  }, [data, form]);
-
-  // 🔘 State for radio project type values
-  const [value, setValue] = useState<number>();
-  const onChange = (e: RadioChangeEvent) => {
-    setValue(Number(e.target.value));
-    console.log("Project type selected: ", e.target.value);
-  };
+  //Countries Select State
+  const [countryValue, setCountryValue] = useState<string>("");
+  const [optionCountry, setOptionCountry] = useState<
+    {
+      value: string;
+      label: string;
+    }[]
+  >([]);
+  const [allCountries, setAllCountries] = useState<CountryDataTypes[]>([]);
 
   // 🏘️  Province Select State
   const [provinceValue, setProvinceValue] = useState<string>("");
   const [optionsProvince, setOptionsProvince] = useState<
     { value: string; label: string }[]
   >([]);
-  const [allProvinces, setAllProvinces] = useState<ProvinceDataType[]>([]);
+  const [allProvinces, setAllProvinces] = useState<ProvinceDataTypes[]>([]);
 
   // 🏡 District Select State
   const [districtValue, setDistrictValue] = useState<string>("");
   const [optionsDistrict, setOptionsDistrict] = useState<
     { value: string; label: string }[]
   >([]);
-  const [allDistricts, setAllDistricts] = useState<DistrictDataType[]>([]);
+  const [allDistricts, setAllDistricts] = useState<DistrictDataTypes[]>([]);
 
   // 🏠 Sub-district Select State
   const [subDistrictValue, setSubDistrictValue] = useState<string>("");
@@ -217,28 +221,39 @@ const EditProjectModal = ({
     []
   );
 
-  // Postal code state
+  //Postal code state
   const [postalCodeValue, setPostalCodeValue] = useState<number | string>();
+  //Timezone
+  const [timezone, setTimezone] = useState<string>("");
+
+  const getCountriesData = () => {
+    try {
+      const data = countryData as CountryDataTypes[];
+      setAllCountries(data);
+      const countriesOptions = data
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((c) => ({
+          value: c.name,
+          label: c.name,
+        }));
+      setOptionCountry(countriesOptions);
+    } catch (error: any) {
+      console.log("Error loading countries data:", error.message);
+    }
+  };
 
   const getProvincesData = () => {
     try {
-      const data = provinceData as ProvinceDataType[];
+      const data = provinceData as ProvinceDataTypes[];
       setAllProvinces(data);
-      const provinceOptions = data
-        .sort((a, b) => a.name_en.localeCompare(b.name_en))
-        .map((p) => ({
-          value: p.name_en,
-          label: p.name_en,
-        }));
-      setOptionsProvince(provinceOptions);
     } catch (error: any) {
-      console.error("Error loading province data:", error.message);
+      console.log("Error loading province data:", error.message);
     }
   };
 
   const getDistrictData = async () => {
     try {
-      const data = districtData as DistrictDataType[];
+      const data = districtData as DistrictDataTypes[];
       setAllDistricts(data);
     } catch (error: any) {
       console.error("Error loading district data:", error.message);
@@ -255,70 +270,77 @@ const EditProjectModal = ({
   };
 
   useEffect(() => {
+    getCountriesData();
     getProvincesData();
     getDistrictData();
     getSubDistrictData();
   }, []);
 
+  const onSelectCountry = (value: string) => {
+    setCountryValue(value);
+    const selectedCountry = allCountries.find((c) => c.name === value);
+    const countryId = selectedCountry?.id;
+
+    form.setFieldsValue({
+      province: "",
+      district: "",
+      timeZone: "",
+      subdistrict: "",
+      zipCode: "",
+    });
+
+    if (countryId) {
+      const countryProvinces = allProvinces
+        .filter((p) => p.country_id === countryId)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((p) => ({
+          value: p.name,
+          label: p.name,
+        }));
+      setOptionsProvince(countryProvinces);
+      const timeZoneCountry = selectedCountry?.timezones?.[0]?.zoneName || "";
+      setTimezone(timeZoneCountry);
+      form.setFieldsValue({
+        timeZone: timeZoneCountry,
+      });
+    }
+  };
+
   const onSelectProvince = (value: string) => {
     setProvinceValue(value);
-    const selectedProvince = allProvinces.find((p) => p.name_en === value);
+    const selectedProvince = allProvinces.find((p) => p.name === value);
     const provinceId = selectedProvince?.id;
 
-    // Reset district and sub-district when province changes
-    setDistrictValue("");
-    setSubDistrictValue("");
-    setPostalCodeValue("");
-    setOptionsDistrict([]);
-    setOptionsSubDistrict([]);
-
-    // Update form fields
     form.setFieldsValue({
       district: "",
       subdistrict: "",
       zipCode: "",
     });
 
-    // Filter districts for the selected province
     if (provinceId) {
-      const provinceDistricts = allDistricts
-        .filter((p) => p.province_id === provinceId)
-        .sort((a, b) => a.name_en.localeCompare(b.name_en))
+      const provinceDistrict = allDistricts
+        .filter((d) => d.state_id === provinceId)
+        .sort((a, b) => a.name.localeCompare(b.name))
         .map((d) => ({
-          value: d.name_en,
-          label: d.name_en,
+          value: d.name,
+          label: d.name,
+          key: d.id,
         }));
-      setOptionsDistrict(provinceDistricts);
+      setOptionsDistrict(provinceDistrict);
     }
   };
 
   const onSelectDistrict = (value: string) => {
     setDistrictValue(value);
-    const selectedDistrict = allDistricts.find((d) => d.name_en === value);
+    const selectedDistrict = allDistricts.find((d) => d.name === value);
     const districtId = selectedDistrict?.id;
 
-    // Reset sub-district when district changes
+    console.log("District Name: ", value);
+    console.log("District ID: ", districtId);
+
     setSubDistrictValue("");
     setPostalCodeValue("");
     setOptionsSubDistrict([]);
-
-    // Update form field
-    form.setFieldsValue({
-      subdistrict: "",
-      zipCode: "",
-    });
-
-    // Filter sub-districts for the selected district
-    if (districtId) {
-      const districtSubDistricts = allSubDistrict
-        .filter((sd) => sd.amphure_id === districtId)
-        .sort((a, b) => a.name_en.localeCompare(b.name_en))
-        .map((sd) => ({
-          value: sd.name_en,
-          label: sd.name_en,
-        }));
-      setOptionsSubDistrict(districtSubDistricts);
-    }
   };
 
   const onSelectSubDistrict = (value: string) => {
@@ -326,271 +348,304 @@ const EditProjectModal = ({
     const selectedSubDistrict = allSubDistrict.find(
       (sd) => sd.name_en === value
     );
+    const subDistrictId = selectedSubDistrict?.id;
     const zipCode = selectedSubDistrict?.zip_code;
+
     setPostalCodeValue(zipCode);
 
     form.setFieldsValue({
       zipCode: zipCode?.toString(),
     });
-  };
 
+    console.log("Sub-District Name: ", value);
+    console.log("Sub-District ID: ", subDistrictId);
+    console.log("Zip Code: ", zipCode);
+  };
   const ProjectForm = () => {
     return (
-      <Form
-        form={form}
-        name="projectDraftFormEdit"
-        initialValues={{ remember: true }}
-        autoComplete="off"
-        layout="vertical"
-        onFinish={onFinish}
-        onFinishFailed={() => {
-          console.log("FINISHED FAILED");
-        }}>
-        <Row gutter={20} style={{ paddingInline: "12px" }}>
-          {/* Project name | Project type | Province | District | Sub-district | Road */}
-          <Col span={6}>
-            <Form.Item label="Project name" name="name" rules={requiredRule}>
-              <Input
-                size="middle"
-                placeholder="Please input project name"
-                maxLength={120}
-                showCount
-              />
-            </Form.Item>
-            <Form.Item
-              label="Select project type"
-              name="projectTypeId"
-              rules={[
-                { required: true, message: "Please select project type!" },
-              ]}>
-              <Radio.Group
-                size="middle"
-                onChange={onChange}
-                value={value}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  flexWrap: "wrap",
-                  rowGap: 12,
-                }}>
-                {typeData?.map((item: any, index: number) => (
-                  <Radio key={index} value={item.id}>
-                    {item.nameEn}
-                  </Radio>
-                )) || []}
-              </Radio.Group>
-            </Form.Item>
-            <Form.Item
-              label="Province"
-              name="province"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select province!",
-                },
-              ]}>
-              <Select
-                value={provinceValue}
-                options={optionsProvince}
-                onSelect={onSelectProvince}
-                allowClear
-                showSearch
-                placeholder="Please select province"
-                filterOption={(input, option) =>
-                  (option?.label ?? "")
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              />
-            </Form.Item>
-            <Form.Item
-              label="District"
-              name="district"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select district!",
-                },
-              ]}>
-              <Select
-                value={districtValue}
-                options={optionsDistrict}
-                onSelect={onSelectDistrict}
-                allowClear
-                showSearch
-                placeholder="Please select district"
-                disabled={!provinceValue}
-                filterOption={(input, option) =>
-                  (option?.label ?? "")
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Sub-district"
-              name="subdistrict"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select sub-district!",
-                },
-              ]}>
-              <Select
-                value={subDistrictValue}
-                options={optionsSubDistrict}
-                onSelect={onSelectSubDistrict}
-                allowClear
-                showSearch
-                placeholder="Please select subdistrict"
-                disabled={!districtValue}
-                filterOption={(input, option) =>
-                  (option?.label ?? "")
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              />
-            </Form.Item>
-            <Form.Item label="Postal code" name="zipCode" rules={requiredRule}>
-              <Input
-                size="middle"
-                placeholder="Please input postal code"
-                maxLength={10}
-                showCount
-                value={postalCodeValue?.toString()}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setPostalCodeValue(value);
-                  form.setFieldsValue({ zipCode: value });
-                }}
-                disabled={!subDistrictValue}
-              />
-            </Form.Item>
-          </Col>
-          {/* Soi | Address | Postal code | Phone number | Email */}
-          <Col span={6}>
-            <Form.Item label="Soi" name="subStreet">
-              <Input
-                size="middle"
-                placeholder="Please input Soi"
-                maxLength={60}
-                showCount
-              />
-            </Form.Item>
-            <Form.Item label="Address" name="address" rules={requiredRule}>
-              <TextArea rows={6} placeholder="Please input address" />
-            </Form.Item>
-            <Form.Item label="Road" name="road">
-              <Input
-                size="middle"
-                placeholder="Please input road"
-                maxLength={60}
-                showCount
-              />
-            </Form.Item>
-            <Form.Item
-              label="Phone number"
-              name="contactNumber"
-              rules={telRule}>
-              <Input
-                size="middle"
-                placeholder="Please input phone number"
-                maxLength={10}
-                showCount
-              />
-            </Form.Item>
-            <Form.Item
-              label="Email"
-              name="email"
-              // rules={emailRule}
-            >
-              <Input
-                size="middle"
-                placeholder="Please input email"
-                maxLength={120}
-                showCount
-              />
-            </Form.Item>
-          </Col>
-          {/* Project image | Project logo */}
-          <Col span={6}>
-            <Form.Item
-              label="Project image"
-              name="image"
-              rules={[
-                {
-                  required: true,
-                  message: "Please upload project image!",
-                },
-              ]}>
-              <UploadImageWithCrop
-                onChange={(url) => setPreviewImage(url)}
-                image={previewImage}
-                ratio="1920x1080 px"
-                height={180}
-              />
-            </Form.Item>
-            <Form.Item
-              label="Logo project"
-              name="logo"
-              rules={[
-                {
-                  required: true,
-                  message: "Please upload logo project!",
-                },
-              ]}>
-              <UploadImageWithCrop
-                onChange={(url) => setPreviewLogo(url)}
-                image={previewLogo}
-                ratio="1920x1080 px"
-                height={180}
-              />
-            </Form.Item>
-          </Col>
-          {/* Google Map */}
-          <Col span={6}>
-            <Form.Item
-              label="Map"
-              rules={[
-                {
-                  validator: () => {
-                    if (!hasPickedLocation) {
-                      return Promise.reject(
-                        "Please select a location on the map"
-                      );
-                    }
-                    return Promise.resolve();
+      <Spin spinning={editProject}>
+        <Form
+          form={form}
+          name="projectDraftForm"
+          initialValues={{ remember: true }}
+          autoComplete="off"
+          layout="vertical"
+          onFinish={onFinish}
+          onFinishFailed={() => {
+            console.log("FINISHED FAILED");
+          }}
+        >
+          <Row gutter={20} style={{ paddingInline: "12px" }}>
+            <Col span={6}>
+              <Form.Item label="Project name" name="name" rules={requiredRule}>
+                <Input
+                  size="middle"
+                  placeholder="Please input project name"
+                  maxLength={120}
+                  showCount
+                />
+              </Form.Item>
+              <Form.Item
+                label="Select project type"
+                name="projectTypeId"
+                rules={[
+                  { required: true, message: "Please select project type!" },
+                ]}
+              >
+                <Radio.Group
+                  size="middle"
+                  onChange={onChange}
+                  value={value}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    rowGap: 10,
+                  }}
+                  disabled
+                >
+                  {typeData?.map((item: any) => (
+                    <Radio key={item.id} value={item.id.toString()}>
+                      {item.nameEn}
+                    </Radio>
+                  )) || []}
+                </Radio.Group>
+              </Form.Item>
+              <Form.Item label="Address" name="address" rules={requiredRule}>
+                <Input
+                  size="middle"
+                  placeholder="Please input address"
+                  maxLength={120}
+                  showCount
+                  disabled
+                />
+              </Form.Item>
+              <Form.Item label="Soi" name="subStreet">
+                <Input
+                  size="middle"
+                  placeholder="Please input Soi"
+                  maxLength={60}
+                  showCount
+                  disabled
+                />
+              </Form.Item>
+              <Form.Item label="Road" name="road" rules={requiredRule}>
+                <Input
+                  size="middle"
+                  placeholder="Please input road"
+                  maxLength={60}
+                  showCount
+                  disabled
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                label="Country"
+                name="country"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input country!",
                   },
-                },
-              ]}>
-              {MapElement}
-              {hasPickedLocation && (
-                <div style={{ marginTop: 12, fontSize: 12, color: "#333" }}>
-                  Selected: {mapCoordsRef.current.lat.toFixed(6)},{" "}
-                  {mapCoordsRef.current.lng.toFixed(6)}
-                </div>
-              )}
-            </Form.Item>
-            <Form.Item name="lat" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="long" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="country" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item name="timeZone" hidden>
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
-        <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
-          <SmallButton className="saveButton" message="Save" form={form} />
-        </Form.Item>
-      </Form>
+                ]}
+              >
+                <Select
+                  value={countryValue}
+                  options={optionCountry}
+                  onSelect={onSelectCountry}
+                  allowClear
+                  showSearch
+                  placeholder="Please select country"
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  disabled
+                />
+              </Form.Item>
+              <Form.Item
+                label="timezone"
+                name="timeZone"
+                rules={requiredRule}
+                hidden
+              >
+                <Input
+                  size="middle"
+                  maxLength={60}
+                  showCount
+                  value={timezone}
+                  disabled
+                />
+              </Form.Item>
+              <Form.Item
+                label="Province"
+                name="province"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select province!",
+                  },
+                ]}
+              >
+                <Select
+                  value={provinceValue}
+                  options={optionsProvince}
+                  onSelect={onSelectProvince}
+                  allowClear
+                  showSearch
+                  disabled
+                  placeholder="Please select province"
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+              <Form.Item
+                label="District"
+                name="district"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select district!",
+                  },
+                ]}
+              >
+                <Select
+                  value={districtValue}
+                  options={optionsDistrict}
+                  onSelect={onSelectDistrict}
+                  disabled
+                  allowClear
+                  showSearch
+                  placeholder="Please select district"
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+              <Form.Item
+                label="Sub-district"
+                name="subdistrict"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input sub-district!",
+                  },
+                ]}
+              >
+                <Input
+                  size="middle"
+                  placeholder="Please input sub-district"
+                  disabled
+                />
+              </Form.Item>
+              <Form.Item
+                label="Postal code"
+                name="zipCode"
+                rules={requiredRule}
+              >
+                <Input
+                  size="middle"
+                  placeholder="Please input postal code"
+                  maxLength={10}
+                  showCount
+                  disabled
+                />
+              </Form.Item>
+              <Form.Item
+                label="Juristic phone number"
+                name="contactNumber"
+                rules={telRule}
+              >
+                <Input
+                  size="middle"
+                  placeholder="Please input juristic phone"
+                  maxLength={10}
+                  showCount
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                label="Project image (App cover)"
+                name="image"
+                valuePropName="value"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please upload project image!",
+                  },
+                ]}
+              >
+                <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
+              </Form.Item>
+              <Form.Item
+                label="Logo project"
+                name="logo"
+                valuePropName="value"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please upload logo project!",
+                  },
+                ]}
+              >
+                <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
+              </Form.Item>
+            </Col>
+            {/* Google Map */}
+            <Col span={6}>
+              <Form.Item
+                label="Map"
+                rules={[
+                  {
+                    validator: () => {
+                      const { lat, lng } = mapCoordsRef.current;
+                      if (
+                        !hasPickedLocation ||
+                        (lat === DEFAULT_CENTER.lat &&
+                          lng === DEFAULT_CENTER.lng)
+                      ) {
+                        return Promise.reject(
+                          "Please select a location on the map"
+                        );
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
+              >
+                {MapElement}
+                {hasPickedLocation && (
+                  <div style={{ marginTop: 12, fontSize: 12, color: "#333" }}>
+                    Selected: {mapCoordsRef.current.lat.toFixed(6)},{" "}
+                    {mapCoordsRef.current.lng.toFixed(6)}
+                  </div>
+                )}
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24} style={{ justifyItems: "flex-end" }}>
+              <Form.Item style={{ margin: 0 }}>
+                {/* ถ้า SmallButton ของคุณรองรับ loading ก็ใส่ loading={savingProject} ได้ */}
+                <SmallButton
+                  className="saveButton"
+                  message="Save"
+                  form={form}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Spin>
     );
   };
 
