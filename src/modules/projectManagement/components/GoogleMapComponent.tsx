@@ -184,12 +184,14 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
           zIndex: 1000,
           display: "flex",
           gap: 8,
-        }}>
+        }}
+      >
         <Input
           ref={inputRef}
           placeholder="Search for places..."
           onKeyDown={onInputKeyDown}
           style={{ flex: 1 }}
+          className="googleMapInput"
         />
       </div>
 

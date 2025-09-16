@@ -37,6 +37,8 @@ const LicenseManagement = () => {
     useState(false);
   const [isAssignProjectOpen, setIsAssignProjectOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
+  const [currentPackageStep, setCurrentPackageStep] = useState<number>(1);
+  const [currentLicenseId, setCurrentLicenseId] = useState<string>("");
 
   // API query - ใช้แค่ React Query
   const queryParams: GetLicenseParams = {
@@ -51,10 +53,6 @@ const LicenseManagement = () => {
     isLoading,
     refetch,
   } = getLicenseQuery(queryParams);
-
-  // Mutations
-  const renewLicenseMutation = useRenewLicenseMutation();
-  const makePaymentMutation = useMakePaymentMutation();
 
   // Event handlers
   const handleSearch = (value: string) => {
@@ -94,35 +92,30 @@ const LicenseManagement = () => {
   const handleSelectPackageCancel = () => {
     setIsSelectPackageModalOpen(false);
     setSelectedProjectId(undefined);
+    setCurrentPackageStep(1);
   };
 
   // License actions
   const handleRenew = (record: LicenseItem) => {
-    callConfirmModal({
-      title: "Renew license",
-      message: `Renew license for "${record.project.name}"?`,
-      okMessage: "Renew",
-      cancelMessage: "Cancel",
-      onOk: async () => {
-        await renewLicenseMutation.mutateAsync({
-          licenseId: record.id,
-          packageType: record.packageName || "Standard",
-        });
-      },
-    });
+    // console.log(record);
+    if (record.status === "in_service") {
+      setSelectedProjectId(record.project.id);
+      setCurrentLicenseId(record.id);
+      setIsSelectPackageModalOpen(true);
+    }
   };
 
   const handleMakePayment = (record: LicenseItem) => {
-    callConfirmModal({
-      title: "Make payment",
-      message: `Proceed to payment for "${record.project.name}"?`,
-      alertMessage: "Please ensure you have the payment slip ready for upload.",
-      okMessage: "Pay now",
-      cancelMessage: "Cancel",
-      onOk: () => {
-        window.open("#/license/payment", "_blank");
-      },
-    });
+    // console.log(record);
+    if (record.status === "waiting_for_payment") {
+      setSelectedProjectId(record.project.id);
+      setCurrentLicenseId(record.id);
+      setCurrentPackageStep(2);
+      setIsSelectPackageModalOpen(true);
+    }
+  };
+  const handleNextStep = () => {
+    setCurrentPackageStep(currentPackageStep + 1);
   };
 
   // Table columns
@@ -160,26 +153,6 @@ const LicenseManagement = () => {
       align: "center",
       render: (status) => (status ? <StatusPill status={status} /> : "N/A"),
     },
-    // {
-    //   title: "Payment Status",
-    //   dataIndex: ["paymentStatus", "nameEn"],
-    //   key: "paymentStatus",
-    //   align: "center",
-    //   render: (status, record) => (
-    //     <span
-    //       style={{
-    //         color:
-    //           record.paymentStatus.nameCode === "success"
-    //             ? "#38BE43"
-    //             : record.paymentStatus.nameCode === "pending"
-    //             ? "#ECA013"
-    //             : "#D73232",
-    //         fontWeight: "500",
-    //       }}>
-    //       {status}
-    //     </span>
-    //   ),
-    // },
     {
       title: "License",
       key: "license",
@@ -250,7 +223,8 @@ const LicenseManagement = () => {
             icon={<ReloadOutlined />}
             onClick={handleRefresh}
             size="large"
-            loading={isLoading}>
+            loading={isLoading}
+          >
             Refresh
           </Button>
         </Col>
@@ -260,7 +234,8 @@ const LicenseManagement = () => {
             size="large"
             type="primary"
             onClick={handleBuyNew}
-            style={{ width: "100%" }}>
+            style={{ width: "100%" }}
+          >
             Buy new license
           </Button>
         </Col>
@@ -291,8 +266,6 @@ const LicenseManagement = () => {
         </Col>
       </Row>
 
-      
-
       {/* Modals */}
       <AssignProjectModal
         open={isAssignProjectOpen}
@@ -303,6 +276,10 @@ const LicenseManagement = () => {
       <SelectPackageModal
         isSelectPackageModalOpen={isSelectPackageModalOpen}
         onCancel={handleSelectPackageCancel}
+        projectId={selectedProjectId}
+        currentStep={currentPackageStep}
+        onNextStep={handleNextStep}
+        licenseId={currentLicenseId}
       />
 
       {/* อัปเดต InfoModal ให้ใช้ projectId แทน id */}

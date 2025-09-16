@@ -106,7 +106,7 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
           pathname.includes("/projectList"):
           return ["projectTeam"];
 
-        case pathname.includes("/licenseManagement") ||
+        case pathname.includes("/license") ||
           pathname.includes("/paymentHistory"):
           return ["license"];
         default:
@@ -210,7 +210,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
             navigate(key);
             onMenuChange();
           }}
-          onOpenChange={setOpenKeys}>
+          onOpenChange={setOpenKeys}
+        >
           <SubMenu
             key="developerTeam"
             icon={
@@ -219,7 +220,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 className="sideMenuIcon"
               />
             }
-            title="Developer team">
+            title="Developer team"
+          >
             <Menu.Item
               key={`${main_link}/developerTeamInvitations`}
               icon={
@@ -227,7 +229,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                   color={iconSubMenuColorSelector("developerTeamInvitations")}
                   className="sideMenuIcon"
                 />
-              }>
+              }
+            >
               <Link to={`${main_link}/developerTeamInvitations`}>
                 Developer team invitations
               </Link>
@@ -239,7 +242,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                   color={iconSubMenuColorSelector("developerTeamList")}
                   className="sideMenuIcon"
                 />
-              }>
+              }
+            >
               <Link to={`${main_link}/developerTeamList`}>
                 Developer team list
               </Link>
@@ -251,7 +255,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                   color={iconSubMenuColorSelector("developerTeamPermission")}
                   className="sideMenuIcon"
                 />
-              }>
+              }
+            >
               <Link to={`${main_link}/developerTeamPermission`}>
                 Developer team permission
               </Link>
@@ -264,7 +269,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 color={iconSubMenuColorSelector("developerNews")}
                 className="sideMenuIcon"
               />
-            }>
+            }
+          >
             <Link to={`${main_link}/developerNews`}>Developer news</Link>
           </Menu.Item>
           {/* 
@@ -318,7 +324,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 className="sideMenuIcon"
               />
             }
-            title="Project Team">
+            title="Project Team"
+          >
             <Menu.Item
               key={`${main_link}/projectInvitations`}
               icon={
@@ -326,7 +333,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                   color={iconSubMenuColorSelector("projectInvitations")}
                   className="sideMenuIcon"
                 />
-              }>
+              }
+            >
               <Link to={`${main_link}/projectInvitations`}>
                 Project invitation
               </Link>
@@ -338,7 +346,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                   color={iconSubMenuColorSelector("projectList")}
                   className="sideMenuIcon"
                 />
-              }>
+              }
+            >
               <Link to={`${main_link}/projectList`}>Project team list</Link>
             </Menu.Item>
           </SubMenu>
@@ -349,7 +358,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 color={iconMenuColorSelector("projectManagement")}
                 className="sideMenuIcon"
               />
-            }>
+            }
+          >
             <Link to={`${main_link}/projectManagement`}>
               Project management
             </Link>
@@ -361,7 +371,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 color={iconMenuColorSelector("profile")}
                 className="sideMenuIcon"
               />
-            }>
+            }
+          >
             <Link to={`${main_link}/profile`}>Profile</Link>
           </Menu.Item>
           {/* License manage */}
@@ -373,7 +384,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 className="sideMenuIcon"
               />
             }
-            title="License management">
+            title="License management"
+          >
             <Menu.Item
               key={`${main_link}/license`}
               icon={
@@ -381,7 +393,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                   color={iconSubMenuColorSelector("license")}
                   className="sideMenuIcon"
                 />
-              }>
+              }
+            >
               <Link to={`${main_link}/license`}>License</Link>
             </Menu.Item>
           </SubMenu>
@@ -397,7 +410,8 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 className="sideMenuIcon"
               />
             }
-            onClick={logoutHandler}>
+            onClick={logoutHandler}
+          >
             <span style={{ color: "#9CA3AF" }}>Logout</span>
           </Menu.Item>
         </Menu>

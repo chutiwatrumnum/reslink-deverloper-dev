@@ -33,11 +33,11 @@ import UploadImagePayment from "../UploadImagePayment";
 import SmallButton from "../../../../components/common/SmallButton";
 import { openInvoicePdf } from "../InvoicePDF";
 import GoogleMapComponent from "../GoogleMapComponent";
+import SuccessModal from "../../../../components/common/SuccessModal";
 
 // CSS
 import "../../styles/stepModalCreate.css";
 import "../../styles/newProjectForm.css";
-import "../../styles/projectManagement.css";
 
 // Types
 import {
@@ -78,7 +78,7 @@ import {
 import {
   useProjectTypeQuery,
   useFeaturesQuery,
-  useFeaturesAndProjectByIdQuery,
+  usePreviewFeatureByLicenseIdQuery,
 } from "../../../../utils/queriesGroup/projectManagementQueries";
 
 type CreateProjectModalPropsType = {
@@ -107,7 +107,7 @@ const CreateProjectModal = ({
   licenseId: useLicenseId,
   initialStep = 1,
 }: CreateProjectModalPropsType) => {
-  // Forms
+  // 📋 Forms
   const [projectForm] = Form.useForm();
   const [packageForm] = Form.useForm();
   const [payForm] = Form.useForm();
@@ -115,16 +115,15 @@ const CreateProjectModal = ({
   const [open, setOpen] = useState<boolean>(false);
   const [previewProofPayment, setPreviewProofPayment] = useState("");
 
-  // Mutation
+  // 🔁 Mutation
   const createProject = postCreateProjectManagementMutation();
   const createPackageInvoice = postCreatePackageInvoiceMutation();
   const updatePayment = useEditProjectManagementPaymentMutation();
-
-  // Queries
+  // 📮 Queries
   const { data: typeData } = useProjectTypeQuery();
   const { data: featuresData } = useFeaturesQuery();
 
-  // Project id & License id state
+  // 🆔 Project id & License id state
   const [projectId, setProjectId] = useState<string | null>(
     useProjectId || null
   );
@@ -132,9 +131,12 @@ const CreateProjectModal = ({
     useLicenseId || null
   );
 
-  const { data: featureAndBankPreview } = useFeaturesAndProjectByIdQuery(
+  const [previewExitingFeatures, setPreviewExitingFeatures] = useState(false);
+
+  const { data: featureAndBankPreview } = usePreviewFeatureByLicenseIdQuery(
     licenseId!
   );
+  console.log(featureAndBankPreview);
 
   // Bank info data in step 3
   const bankName = featureAndBankPreview?.bank?.bankName || "";
@@ -147,7 +149,7 @@ const CreateProjectModal = ({
     payForm.resetFields(["file"]);
   };
 
-  //Step status management
+  // Step status management
   const [currentStep, setCurrentStep] = useState(initialStep);
 
   const getStepStatus = (index: number): StepStatus => {
@@ -190,14 +192,19 @@ const CreateProjectModal = ({
   );
 
   useEffect(() => {
-    if (featuresData?.standard) {
+    if (
+      featuresData?.standard &&
+      isCreateModalOpen &&
+      !useLicenseId &&
+      currentStep === 2
+    ) {
       const defaultStandardItems = featuresData.standard
         .filter((item: FeaturesDataType) => item.isDefault)
         .map((item: FeaturesDataType) => String(item.id));
 
       setCheckedStandardValues(defaultStandardItems);
     }
-  }, [featuresData]);
+  }, [featuresData, isCreateModalOpen, useLicenseId, currentStep]);
 
   const handleStandardChange = (checkedValues: string[]) => {
     setCheckedStandardValues(checkedValues);
@@ -235,14 +242,6 @@ const CreateProjectModal = ({
     ),
     [handleLocationChange]
   );
-
-  useEffect(() => {
-    setOpen(isCreateModalOpen);
-    if (isCreateModalOpen && initialStep === 1) {
-      mapCoordsRef.current = DEFAULT_CENTER;
-      setHasPickedLocation(false);
-    }
-  }, [isCreateModalOpen, initialStep]);
 
   //Countries Select State
   const [countryValue, setCountryValue] = useState<string>("");
@@ -547,6 +546,7 @@ const CreateProjectModal = ({
   };
 
   useEffect(() => {
+    setOpen(isCreateModalOpen);
     if (isCreateModalOpen) {
       setCurrentStep(initialStep);
       setProjectId(useProjectId || null);
@@ -557,12 +557,84 @@ const CreateProjectModal = ({
       setPreviewProofPayment("");
       // reset form file upload slip
       payForm.resetFields(["file"]);
-      if (initialStep === 1) {
-        mapCoordsRef.current = DEFAULT_CENTER;
-        setHasPickedLocation(false);
-      }
+    }
+    if (isCreateModalOpen && initialStep === 1) {
+      setCheckedFeatureValues([]);
+      mapCoordsRef.current = DEFAULT_CENTER;
+      setHasPickedLocation(false);
     }
   }, [isCreateModalOpen, initialStep, useProjectId, useLicenseId]);
+
+  // Thank you AI
+  const handleOptionalChange = (values: string[]) => {
+    // Get all optional features
+    const optionalFeatures = featuresData?.optional || [];
+
+    // Filter children that have a parent bundle
+    const filteredValues = values.filter((id: string) => {
+      const feature = optionalFeatures.find((f: any) => f.id === id);
+
+      if (!feature) return true;
+
+      // Find parents of this feature (if it's a child)
+      const parentBundles = optionalFeatures.flatMap(
+        (f: any) =>
+          f.featureBundles?.filter((b: any) => b.bundleFeaturesId === id) || []
+      );
+
+      const requiredParents = parentBundles.map((b: any) => b.featuresId);
+
+      // Keep if no parent required OR at least one parent is checked
+      return (
+        requiredParents.length === 0 ||
+        requiredParents.some((pid: string) => values.includes(pid))
+      );
+    });
+    setCheckedFeatureValues(filteredValues);
+  };
+  // Thank you AI
+  useEffect(() => {
+    const existingFeatures = () => {
+      if (licenseId && featureAndBankPreview?.features) {
+        setPreviewExitingFeatures(true);
+
+        try {
+          const standardFeatures =
+            featureAndBankPreview.features.standard || [];
+          const optionalFeatures =
+            featureAndBankPreview.features.optional || [];
+
+          // selected standard features
+          const selectedStandardIds = standardFeatures
+            .filter((item: any) => item.isUserSelect === true)
+            .map((item: any) => String(item.feature?.id || item.id));
+
+          // selected optional features
+          const selectedOptionalIds = optionalFeatures
+            .filter((item: any) => item.isUserSelect === true)
+            .map((item: any) => String(item.feature?.id || item.id));
+
+          setCheckedStandardValues(selectedStandardIds);
+          setCheckedFeatureValues(selectedOptionalIds);
+
+          // Update form values
+          packageForm.setFieldsValue({
+            standardPackage: selectedStandardIds,
+            optionalFeature: selectedOptionalIds,
+          });
+        } catch (error) {
+          console.error("Error loading existing features:", error);
+        } finally {
+          setPreviewExitingFeatures(false);
+        }
+      } else if (licenseId) {
+        setPreviewExitingFeatures(true);
+      } else {
+        setPreviewExitingFeatures(false);
+      }
+    };
+    existingFeatures();
+  }, [licenseId, featureAndBankPreview, packageForm]);
 
   //Content Step 1: Project Draft Form
   const ProjectForm = () => {
@@ -583,10 +655,11 @@ const CreateProjectModal = ({
             <Col span={6}>
               <Form.Item label="Project name" name="name" rules={requiredRule}>
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input project name"
-                  maxLength={120}
+                  maxLength={60}
                   showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item
@@ -597,7 +670,6 @@ const CreateProjectModal = ({
                 ]}
               >
                 <Radio.Group
-                  size="middle"
                   onChange={onChange}
                   value={value}
                   style={{
@@ -605,8 +677,8 @@ const CreateProjectModal = ({
                     alignItems: "center",
                     justifyContent: "space-between",
                     flexWrap: "wrap",
-                    rowGap: 10,
                   }}
+                  className="radioProjectType"
                 >
                   {typeData?.map((item: any, index: number) => (
                     <Radio key={index} value={item.id}>
@@ -617,26 +689,42 @@ const CreateProjectModal = ({
               </Form.Item>
               <Form.Item label="Address" name="address" rules={requiredRule}>
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input address"
-                  maxLength={120}
+                  maxLength={60}
                   showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item label="Soi" name="subStreet">
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input Soi"
                   maxLength={60}
                   showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item label="Road" name="road" rules={requiredRule}>
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input road"
                   maxLength={60}
                   showCount
+                  className="inputCreateForm"
+                />
+              </Form.Item>
+              <Form.Item
+                label="Juristic phone number"
+                name="contactNumber"
+                rules={telRule}
+              >
+                <Input
+                  size="large"
+                  placeholder="Please input juristic phone"
+                  maxLength={10}
+                  showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
             </Col>
@@ -652,6 +740,7 @@ const CreateProjectModal = ({
                 ]}
               >
                 <Select
+                  size="large"
                   value={countryValue}
                   options={optionCountry}
                   onSelect={onSelectCountry}
@@ -663,6 +752,7 @@ const CreateProjectModal = ({
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
+                  className="selectCreateForm"
                 />
               </Form.Item>
               <Form.Item
@@ -671,12 +761,7 @@ const CreateProjectModal = ({
                 rules={requiredRule}
                 hidden
               >
-                <Input
-                  size="middle"
-                  maxLength={60}
-                  showCount
-                  value={timezone}
-                />
+                <Input size="large" maxLength={60} showCount value={timezone} />
               </Form.Item>
               <Form.Item
                 label="Province"
@@ -689,6 +774,7 @@ const CreateProjectModal = ({
                 ]}
               >
                 <Select
+                  size="large"
                   value={provinceValue}
                   options={optionsProvince}
                   onSelect={onSelectProvince}
@@ -701,6 +787,7 @@ const CreateProjectModal = ({
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
+                  className="selectCreateForm"
                 />
               </Form.Item>
               <Form.Item
@@ -714,6 +801,7 @@ const CreateProjectModal = ({
                 ]}
               >
                 <Select
+                  size="large"
                   value={districtValue}
                   options={optionsDistrict}
                   onSelect={onSelectDistrict}
@@ -726,6 +814,7 @@ const CreateProjectModal = ({
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
+                  className="selectCreateForm"
                 />
               </Form.Item>
               <Form.Item
@@ -738,7 +827,11 @@ const CreateProjectModal = ({
                   },
                 ]}
               >
-                <Input size="middle" placeholder="Please input sub-district" />
+                <Input
+                  size="large"
+                  placeholder="Please input sub-district"
+                  className="inputCreateForm"
+                />
               </Form.Item>
               <Form.Item
                 label="Postal code"
@@ -746,22 +839,11 @@ const CreateProjectModal = ({
                 rules={requiredRule}
               >
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input postal code"
                   maxLength={10}
                   showCount
-                />
-              </Form.Item>
-              <Form.Item
-                label="Juristic phone number"
-                name="contactNumber"
-                rules={telRule}
-              >
-                <Input
-                  size="middle"
-                  placeholder="Please input juristic phone"
-                  maxLength={10}
-                  showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
             </Col>
@@ -777,7 +859,7 @@ const CreateProjectModal = ({
                   },
                 ]}
               >
-                <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
+                <UploadImageWithCrop ratio="16:9 Ratio" height={200} />
               </Form.Item>
               <Form.Item
                 label="Logo project"
@@ -790,13 +872,18 @@ const CreateProjectModal = ({
                   },
                 ]}
               >
-                <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
+                <UploadImageWithCrop
+                  aspectRatio={1 / 1}
+                  ratio="1:1 Ratio"
+                  height={200}
+                />
               </Form.Item>
             </Col>
             {/* Google Map */}
             <Col span={6}>
               <Form.Item
                 label="Map"
+                required
                 rules={[
                   {
                     validator: () => {
@@ -817,7 +904,13 @@ const CreateProjectModal = ({
               >
                 {MapElement}
                 {hasPickedLocation && (
-                  <div style={{ marginTop: 12, fontSize: 12, color: "#333" }}>
+                  <div
+                    style={{
+                      marginTop: 12,
+                      fontSize: 12,
+                      color: "#333",
+                    }}
+                  >
                     Selected: {mapCoordsRef.current.lat.toFixed(6)},{" "}
                     {mapCoordsRef.current.lng.toFixed(6)}
                   </div>
@@ -828,7 +921,7 @@ const CreateProjectModal = ({
           <Row style={{ paddingBlock: 8 }}>
             <Col span={24}>
               <Flex justify="center" align="center">
-                <Form.Item>
+                <Form.Item className="buttonGroupCreateProject">
                   <Button
                     size="large"
                     onClick={onCancelProjectDraftForm}
@@ -855,42 +948,33 @@ const CreateProjectModal = ({
       </Spin>
     );
   };
-
-  const handleOptionalChange = (values: string[]) => {
-    // Get all optional features
-    const optionalFeatures = featuresData?.optional || [];
-
-    // Filter children that have a parent bundle
-    const filteredValues = values.filter((id: string) => {
-      const feature = optionalFeatures.find((f: any) => f.id === id);
-
-      if (!feature) return true;
-
-      // Find parents of this feature (if it's a child)
-      const parentBundles = optionalFeatures.flatMap(
-        (f: any) =>
-          f.featureBundles?.filter((b: any) => b.bundleFeaturesId === id) || []
-      );
-
-      const requiredParents = parentBundles.map((b: any) => b.featuresId);
-
-      // Keep if no parent required OR at least one parent is checked
-      return (
-        requiredParents.length === 0 ||
-        requiredParents.some((pid: string) => values.includes(pid))
-      );
-    });
-
-    setCheckedFeatureValues(filteredValues);
-  };
-
   //Content Step 2: Select Package
   const PackageForm = () => {
+    useEffect(() => {
+      packageForm.setFieldsValue({
+        standardPackage: checkedStandardValues,
+        optionalFeature: checkedFeatureValues,
+      });
+    }, [checkedStandardValues, checkedFeatureValues, packageForm]);
+    if (previewExitingFeatures) {
+      return (
+        <div style={{ textAlign: "center", padding: "50px" }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 16 }}>
+            Loading existing package selection...
+          </div>
+        </div>
+      );
+    }
     return (
       <Form
         form={packageForm}
         name="packageForm"
-        initialValues={{ remember: true }}
+        initialValues={{
+          remember: true,
+          standardPackage: checkedStandardValues,
+          optionalFeature: checkedFeatureValues,
+        }}
         autoComplete="off"
         layout="vertical"
         onFinish={onFinishSelectedPackage}
@@ -931,7 +1015,7 @@ const CreateProjectModal = ({
             <Row>
               <Col span={24}>
                 {/* Standard Package Card */}
-                <Card style={{ marginBottom: 12 }}>
+                <Card style={{ marginBottom: 12 }} className="cardPackage">
                   <Typography.Title
                     level={4}
                     style={{ color: "var(--primary-color)" }}
@@ -957,13 +1041,13 @@ const CreateProjectModal = ({
                         {featuresData?.standard?.map(
                           (item: FeaturesDataType, index: number) => {
                             const isChecked = checkedStandardValues.includes(
-                              item.id as string
+                              String(item.id)
                             );
                             return (
                               <Col span={12} key={index}>
                                 <Checkbox
                                   disabled={item.isDefault === true}
-                                  value={item.id}
+                                  value={String(item.id)}
                                   className="packageBoxCustom"
                                   style={{
                                     borderColor: isChecked
@@ -982,7 +1066,7 @@ const CreateProjectModal = ({
                   </Form.Item>
                 </Card>
                 {/* Optional Features Card */}
-                <Card style={{ marginBottom: 12 }}>
+                <Card style={{ marginBottom: 12 }} className="cardPackage">
                   <Typography.Title
                     level={4}
                     style={{ color: "var(--primary-color)" }}
@@ -1006,12 +1090,13 @@ const CreateProjectModal = ({
                               featuresData?.optional?.flatMap(
                                 (f: any) =>
                                   f.featureBundles?.filter(
-                                    (b: any) => b.bundleFeaturesId === item.id
+                                    (b: any) =>
+                                      b.bundleFeaturesId === String(item.id)
                                   ) || []
                               );
 
                             const requiredParents = parentBundles.map(
-                              (b: any) => b.featuresId
+                              (b: any) => String(b.featuresId)
                             );
 
                             const isParentChecked =
@@ -1023,12 +1108,12 @@ const CreateProjectModal = ({
                             return (
                               <Col span={12} key={index}>
                                 <Checkbox
-                                  value={item.id}
+                                  value={String(item.id)} // Ensure String conversion
                                   className="packageBoxCustom"
                                   disabled={!isParentChecked}
                                   style={{
                                     borderColor: checkedFeatureValues.includes(
-                                      item.id
+                                      String(item.id)
                                     )
                                       ? "var(--secondary-color)"
                                       : "#EBEBEB",
@@ -1046,12 +1131,14 @@ const CreateProjectModal = ({
                                     <span
                                       style={{
                                         color: checkedFeatureValues.includes(
-                                          item.id
+                                          String(item.id)
                                         )
                                           ? "var(--success-color)"
                                           : "#3f3f3f",
                                         fontWeight:
-                                          checkedFeatureValues.includes(item.id)
+                                          checkedFeatureValues.includes(
+                                            String(item.id)
+                                          )
                                             ? 600
                                             : 300,
                                       }}
@@ -1081,6 +1168,7 @@ const CreateProjectModal = ({
                   checkedFeatureValues={checkedFeatureValues}
                   standardPackage={featuresData?.standard || []}
                   optionalFeature={featuresData?.optional || []}
+                  licenseId={licenseId}
                 />
               </Col>
             </Row>
@@ -1089,7 +1177,7 @@ const CreateProjectModal = ({
         <Row style={{ marginTop: 24 }}>
           <Col span={24}>
             <Flex justify="center" align="center">
-              <Form.Item>
+              <Form.Item className="buttonGroupCreateProject">
                 <Button
                   type="text"
                   size="large"
@@ -1131,7 +1219,7 @@ const CreateProjectModal = ({
       >
         <Row gutter={20} style={{ paddingInline: "12px" }}>
           <Col span={14}>
-            <Card style={{ marginBottom: 12 }}>
+            <Card style={{ marginBottom: 12, borderRadius: "15px" }}>
               <Typography.Title
                 level={4}
                 style={{ color: "var(--primary-color)" }}
@@ -1203,13 +1291,14 @@ const CreateProjectModal = ({
               checkedFeatureValues={checkedFeatureValues}
               standardPackage={featuresData?.standard || []}
               optionalFeature={featuresData?.optional || []}
+              licenseId={licenseId}
             />
           </Col>
         </Row>
         <Row style={{ paddingTop: 12 }}>
           <Col span={24}>
             <Flex gap={10} justify="center" align="center">
-              <Form.Item>
+              <Form.Item className="buttonGroupCreateProject">
                 <Button
                   type="text"
                   size="large"
@@ -1347,7 +1436,7 @@ const CreateProjectModal = ({
 
   const onCancelProjectDraftForm = async (value: any) => {
     ConfirmModal({
-      title: "You want to exit the Project draft page.",
+      title: "You want to exit the project draft page.",
       message: "Do you want to exit the project draft page?",
       okMessage: "Confirm",
       cancelMessage: "Cancel",
@@ -1361,31 +1450,44 @@ const CreateProjectModal = ({
         onModalClose();
         onRefresh();
         onCancel();
+
+        setTimeout(() => {
+          SuccessModal("Success");
+        }, 100);
       },
     });
   };
 
   const onSkipPackageForm = async (value: any) => {
     ConfirmModal({
-      title: "You want to exit the Select package.",
-      message: "Do you want to exit the Select package?",
+      title: "You want to exit the select package.",
+      message: "Do you want to exit the select package?",
       okMessage: "Confirm",
       cancelMessage: "Cancel",
       onOk: async () => {
-        console.log(value);
+        // console.log(value);
         packageForm.resetFields();
+
         setIsSuccessPayment(false);
-        setLicenseId(null);
+
         mapCoordsRef.current = DEFAULT_CENTER;
         setHasPickedLocation(false);
+
+        setCheckedFeatureValues([]);
+        setCheckedStandardValues([]);
 
         // Reset step to 1 for next modal opening
         setCurrentStep(1);
         setProjectId(null);
+        setLicenseId(null);
 
         onModalClose();
         onRefresh();
         onCancel();
+
+        setTimeout(() => {
+          SuccessModal("Success");
+        }, 100);
       },
     });
   };
@@ -1393,25 +1495,30 @@ const CreateProjectModal = ({
   const onSkipPaymentForm = async (value: any) => {
     ConfirmModal({
       title: "You want to exit complete your payment.",
-      message: "Do you want to exit Complete your payment?",
+      message: "Do you want to exit complete your payment?",
       okMessage: "Confirm",
       cancelMessage: "Cancel",
       onOk: async () => {
-        console.log(value);
+        // console.log(value);
         payForm.resetFields();
         setIsSuccessPayment(false);
-        setLicenseId(null);
         setPreviewProofPayment("");
+
         mapCoordsRef.current = DEFAULT_CENTER;
         setHasPickedLocation(false);
 
         // Reset step to 1 for next modal opening
         setCurrentStep(1);
         setProjectId(null);
+        setLicenseId(null);
 
         onModalClose();
         onRefresh();
         onCancel();
+
+        setTimeout(() => {
+          SuccessModal("Success");
+        }, 100);
       },
     });
   };

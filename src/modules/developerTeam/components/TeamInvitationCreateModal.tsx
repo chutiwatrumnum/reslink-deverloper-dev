@@ -45,7 +45,7 @@ const TeamInvitationCreateModal = ({
           const submitData = {
             roleId: Number(values.roleId), // แปลงเป็น number
             firstName: values.firstName,
-            middleName: values.middleName || "",
+            middleName: values.middleName || null,
             lastName: values.lastName,
             contact: values.contact,
             email: values.email,

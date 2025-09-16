@@ -205,7 +205,8 @@ export interface ProjectFromDataType {
   };
 }
 export interface ProjectManagementParams {
-  activated: boolean;
+  active?: boolean;
+  status: number[];
   perPage: number;
   curPage: number;
   search?: string;

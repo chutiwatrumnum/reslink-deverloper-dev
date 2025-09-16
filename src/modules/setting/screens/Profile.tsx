@@ -207,7 +207,9 @@ const Profile = () => {
                 </Form.Item>
                 <Form.Item
                   label={
-                    <Text className="textColor semiBoldText">Project Name</Text>
+                    <Text className="textColor semiBoldText">
+                      Developer Name
+                    </Text>
                   }
                   name="developerName"
                   style={{ width: "100%" }}>

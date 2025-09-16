@@ -30,6 +30,8 @@ export const useCreateDeveloperNewsMutation = () => {
                     imageUrl: payload.imageUrl || "",
                     startDate: startDateTime,
                     endDate: endDateTime,
+                    startTime: payload.startTime || null,
+                    endTime: payload.endTime || null,
                     active: true,
                     isPublish: true,
                     projects: payload.projects || []
@@ -104,6 +106,8 @@ export const useUpdateDeveloperNewsMutation = () => {
                     imageUrl: payload.imageUrl || "",
                     startDate: startDateTime,
                     endDate: endDateTime,
+                    startTime: payload.startTime || null,
+                    endTime: payload.endTime || null,
                     active: true, // เพิ่ม active field
                     isPublish: true, // เพิ่ม isPublish field
                     projects: payload.projects || []

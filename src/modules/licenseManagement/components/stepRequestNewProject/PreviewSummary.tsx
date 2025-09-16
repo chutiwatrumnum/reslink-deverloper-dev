@@ -1,44 +1,161 @@
 import { Col, Row, Flex, Divider, Card, Empty, Typography } from "antd";
 // Type
-import type { CheckboxOptionType } from "antd/es/checkbox/Group";
+import type { FeaturesDataType } from "../../../../stores/interfaces/ProjectManage";
+// CSS
 import "../../styles/newProjectForm.css";
+// API
+import {
+  useFeaturesBasePriceQuery,
+  usePreviewFeatureByLicenseIdQuery,
+} from "../../../../utils/queriesGroup/projectManagementQueries";
+import { useEffect } from "react";
 
 type PreviewSummaryPropsType = {
   checkedStandardValues: string[];
   checkedFeatureValues: string[];
-  standardPackage: CheckboxOptionType<string>[];
-  optionalFeature: CheckboxOptionType<string>[];
+  standardPackage: FeaturesDataType[];
+  optionalFeature: FeaturesDataType[];
+  form?: any;
+  licenseId?: string | null;
 };
+
+const { Text } = Typography;
 
 const PreviewSummary = ({
   checkedStandardValues,
   checkedFeatureValues,
   standardPackage,
   optionalFeature,
+  form,
+  licenseId,
 }: PreviewSummaryPropsType) => {
-  const standardPackagePrice = 50000; // Fixed price
-  const optionalFeaturePrice = 10000; // Fixed price
-  const vatRate = 0.07;
-
-  const selectedStandardPackage = standardPackage.filter((item) =>
-    checkedStandardValues.includes(item.value)
+  const { data: basedPriceData } = useFeaturesBasePriceQuery();
+  const { data: previewFeature } = usePreviewFeatureByLicenseIdQuery(
+    licenseId?.toString()
   );
 
-  const selectedOptionalFeature = optionalFeature.filter((item) =>
-    checkedFeatureValues.includes(item.value)
-  );
+  const getSelectedStandardPackage = () => {
+    if (licenseId && previewFeature?.features?.standard) {
+      // Use existing data from API
+      return previewFeature.features.standard
+        .filter((item: any) => item.isUserSelect === true)
+        .map((item: any) => ({
+          id: item.feature?.id || item.id,
+          name: item.feature?.name || item.name,
+          price: item.price || 0,
+        }));
+    }
 
-  const standardTotal = standardPackagePrice;
-  const optionalTotal = selectedOptionalFeature.length * optionalFeaturePrice;
-  const subtotal = standardTotal + optionalTotal;
+    // Use current selection from form
+    return standardPackage.filter((item) => {
+      if (!item?.id) return false;
+      return checkedStandardValues.includes(String(item.id));
+    });
+  };
+
+  const getSelectedOptionalFeature = () => {
+    if (licenseId && previewFeature?.features?.optional) {
+      // Use existing data from API
+      return previewFeature.features.optional
+        .filter((item: any) => item.isUserSelect === true)
+        .map((item: any) => ({
+          id: item.feature?.id || item.id,
+          name: item.feature?.name || item.name,
+          price: item.price || 0,
+        }));
+    }
+
+    // Use current selection from form
+    return optionalFeature.filter((item) => {
+      if (!item?.id) return false;
+      return checkedFeatureValues.includes(String(item.id));
+    });
+  };
+
+  const selectedStandardPackage = getSelectedStandardPackage();
+  const selectedOptionalFeature = getSelectedOptionalFeature();
+
+  const getStandardPrice = () => {
+    if (licenseId && previewFeature?.standardBasePrice !== undefined) {
+      return Number(previewFeature.standardBasePrice);
+    }
+
+    const standardItem = basedPriceData?.basePrice?.find(
+      (item: any) => item.name === "Standard"
+    );
+    return standardItem ? Number(standardItem.price) : 50000;
+  };
+
+  const getVatRate = () => {
+    if (licenseId && previewFeature?.vatPercent !== undefined) {
+      return Number(previewFeature.vatPercent) / 100;
+    }
+
+    const standardItem = basedPriceData?.basePrice?.find(
+      (item: any) => item.name === "Standard"
+    );
+    return standardItem ? Number(standardItem.vatPercent) / 100 : 0.07;
+  };
+
+  useEffect(() => {
+    if (!form) return;
+
+    const standardBasedPrice =
+      checkedStandardValues.length > 0 ? getStandardPrice() : 0;
+
+    const optionalBasedPrice = selectedOptionalFeature.reduce(
+      (sum, i) => sum + Number(i.price ?? 0),
+      0
+    );
+
+    const totalStandard = standardBasedPrice;
+    const totalOptional = optionalBasedPrice;
+
+    // Calculate subtotal
+    const subtotal = Number(standardBasePrice) + Number(optionalBasePrice);
+
+    // Calculate VAT
+    const vatRate = getVatRate();
+    const vatPercent = vatRate * 100;
+    const totalVat = subtotal * vatRate;
+    const totalPriceWithVat = subtotal + totalVat;
+
+    // ALL features selected
+    const features = [...selectedStandardPackage, ...selectedOptionalFeature];
+
+    form.setFieldsValue({
+      standardBasePrice: Number(standardBasePrice),
+      optionalBasePrice: Number(optionalBasePrice),
+      totalStandard: Number(totalStandard),
+      totalOptional: Number(totalOptional),
+      totalPrice: Number(subtotal),
+      vatPercent: Number(vatPercent),
+      totalVat: Number(totalVat),
+      totalPriceWithVat: Number(totalPriceWithVat),
+      features: JSON.stringify(features),
+    });
+  }, [
+    form,
+    checkedStandardValues,
+    checkedFeatureValues,
+    selectedStandardPackage,
+    selectedOptionalFeature,
+    basedPriceData,
+  ]);
+
+  const standardBasePrice =
+    checkedStandardValues.length > 0 ? getStandardPrice() : 0;
+  const optionalBasePrice = selectedOptionalFeature.reduce(
+    (sum, f) => sum + Number(f.price ?? 0),
+    0
+  );
+  const subtotal = standardBasePrice + optionalBasePrice;
+  const vatRate = getVatRate();
   const vatAmount = subtotal * vatRate;
-
-  const total = checkedStandardValues.length === 0 ? 0 : subtotal + vatAmount;
-
-  const { Text } = Typography;
+  const total = subtotal + vatAmount;
 
   return (
-    <Card style={{ marginBottom: 12 }}>
+    <Card style={{ marginBottom: 12 }} className="previewSumCard">
       <Typography.Title
         level={4}
         style={{ color: "var(--primary-color)", margin: 0 }}
@@ -56,10 +173,11 @@ const PreviewSummary = ({
                   span={24}
                   style={{
                     border: "1px solid #C6C8C9",
-                    borderTopLeftRadius: 6,
-                    borderTopRightRadius: 6,
+                    borderTopLeftRadius: "8px",
+                    borderTopRightRadius: "8px",
                     backgroundColor: "#A6CBFF",
                     padding: 6,
+                    paddingInline: "20px",
                   }}
                 >
                   <Typography.Title
@@ -79,7 +197,7 @@ const PreviewSummary = ({
                       className="previewPackageCol"
                     >
                       <Text style={{ color: "var(--primary-color)" }}>
-                        {item.label}
+                        {item?.name}
                       </Text>
                     </Flex>
                   ))}
@@ -91,8 +209,7 @@ const PreviewSummary = ({
                     style={{ width: "100%", height: "100%" }}
                   >
                     <Text style={{ color: "var(--primary-color)" }}>
-                      {Number(standardPackagePrice.toFixed(2)).toLocaleString()}
-                      .-
+                      {Number(standardBasePrice.toFixed(2)).toLocaleString()}.-
                     </Text>
                   </Flex>
                 </Col>
@@ -108,10 +225,11 @@ const PreviewSummary = ({
                   span={24}
                   style={{
                     border: "1px solid #C6C8C9",
-                    borderTopLeftRadius: 6,
-                    borderTopRightRadius: 6,
+                    borderTopLeftRadius: "8px",
+                    borderTopRightRadius: "8px",
                     backgroundColor: "#A6CBFF",
                     padding: 6,
+                    paddingInline: "20px",
                   }}
                 >
                   <Typography.Title
@@ -127,7 +245,7 @@ const PreviewSummary = ({
                   <Col span={12} className="previewPackageCol">
                     <Flex justify="space-between">
                       <Text style={{ color: "var(--primary-color)" }}>
-                        {item.label}
+                        {item?.name}
                       </Text>
                     </Flex>
                   </Col>
@@ -138,9 +256,9 @@ const PreviewSummary = ({
                       style={{ width: "100%", height: "100%" }}
                     >
                       <Text style={{ color: "var(--primary-color)" }}>
-                        {Number(
-                          optionalFeaturePrice.toFixed(2)
-                        ).toLocaleString()}
+                        {item?.price
+                          ? Number(item.price).toLocaleString()
+                          : "0"}
                         .-
                       </Text>
                     </Flex>
@@ -149,8 +267,7 @@ const PreviewSummary = ({
               ))}
             </div>
           )}
-
-          {/* VAT 7% */}
+          {/* VAT */}
           {(checkedStandardValues.length > 0 ||
             checkedFeatureValues.length > 0) && (
             <Row
@@ -161,12 +278,20 @@ const PreviewSummary = ({
             >
               <Col
                 span={12}
-                style={{ borderRight: "1px solid #c6c8c9", padding: 6 }}
+                style={{
+                  borderRight: "1px solid #c6c8c9",
+                  padding: 6,
+                  paddingLeft: "20px",
+                }}
               >
-                <Text>VAT 7%</Text>
+                <Text>VAT {(vatRate * 100).toFixed(0)}%</Text>
               </Col>
-              <Col span={12} style={{ padding: 6 }}>
-                <Flex justify="center" align="center">
+              <Col span={12}>
+                <Flex
+                  justify="center"
+                  align="center"
+                  style={{ width: "100%", padding: 6 }}
+                >
                   <Text style={{ color: "var(--primary-color)" }}>
                     {Number(vatAmount.toFixed(2)).toLocaleString()}.-
                   </Text>
@@ -199,7 +324,7 @@ const PreviewSummary = ({
           style={{ color: "var(--secondary-color)", margin: 0 }}
         >
           {total === 0 ? (
-            <>0.-</>
+            <>00.00.-</>
           ) : (
             Number(total.toFixed(2)).toLocaleString() + ".-"
           )}

@@ -1,6 +1,7 @@
 
 .ant-upload{
     border: 0 !important;
+    border-radius: 16px !important;
 }
 
 .noImageIconUpload {

@@ -95,13 +95,18 @@
     color: var( --subMenuText-color);
 }
 
-.packageBoxCustom {
+.ant-checkbox-wrapper.packageBoxCustom {
     width: 100%;
     border: 1px solid;
-    padding: 10px;
-    border-radius: 8px;
+    padding: 12px;
+    border-radius: 15px;
     margin-bottom: 10px;
     box-shadow: 0 8px 12px -10px rgba(0, 0, 0, 0.05);
+}
+
+.packageBoxCustom > .ant-checkbox-label{
+    color: var(--primary-color) !important;
+    font-weight: 500 !important;
 }
 
 .previewCardTitle {
@@ -119,4 +124,8 @@
 .packageLink {
     text-decoration:underline;
     color: var(--secondary-color);
+}
+
+.ant-card.cardPackage  {
+    border-radius: 15px !important;
 }

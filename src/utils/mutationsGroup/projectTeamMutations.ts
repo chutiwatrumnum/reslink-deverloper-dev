@@ -34,7 +34,7 @@ export const useEditProjectTeamMemberMutation = () => {
         const apiPayload = {
           givenName: payload.givenName,
           familyName: payload.familyName,
-          middleName: payload.middleName || "",
+          middleName: payload.middleName || null,
           contact: payload.contact,
           roleId: payload.roleId,
         };
@@ -106,7 +106,7 @@ export const postCreateProjectJuristicInvitationMutation = () => {
           projectId: payload.projectId,
           roleId: Number(payload.roleId),
           firstName: payload.firstName,
-          middleName: payload.middleName || "",
+          middleName: payload.middleName || null,
           lastName: payload.lastName,
           contact: payload.contact,
           email: payload.email, //  string | boolean
@@ -218,7 +218,7 @@ export const useEditProjectJuristicInvitationMutation = () => {
           projectId: payload.projectId,
           roleId: Number(payload.roleId),
           firstName: payload.firstName,
-          middleName: payload.middleName || "",
+          middleName: payload.middleName || null,
           lastName: payload.lastName,
           contact: payload.contact,
         };

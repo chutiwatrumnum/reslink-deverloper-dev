@@ -1,14 +1,14 @@
 import { Col, Row, Flex, Divider, Card, Empty, Typography } from "antd";
 // Type
-import type {
-  FeaturesDataType,
-  PreviewFeatureById,
-} from "../../../../stores/interfaces/ProjectManage";
+import type { FeaturesDataType } from "../../../../stores/interfaces/ProjectManage";
 // CSS
 import "../../styles/newProjectForm.css";
 // API
-import { useFeaturesBasePriceQuery } from "../../../../utils/queriesGroup/projectManagementQueries";
-import { useEffect, useState } from "react";
+import {
+  useFeaturesBasePriceQuery,
+  usePreviewFeatureByLicenseIdQuery,
+} from "../../../../utils/queriesGroup/projectManagementQueries";
+import { useEffect } from "react";
 
 type PreviewSummaryPropsType = {
   checkedStandardValues: string[];
@@ -26,27 +26,71 @@ const PreviewSummary = ({
   checkedFeatureValues,
   standardPackage,
   optionalFeature,
-  licenseId,
   form,
+  licenseId,
 }: PreviewSummaryPropsType) => {
   const { data: basedPriceData } = useFeaturesBasePriceQuery();
+  const { data: previewFeature } = usePreviewFeatureByLicenseIdQuery(
+    licenseId?.toString()
+  );
 
-  const selectedStandardPackage = standardPackage.filter((item) => {
-    if (!item?.id) return false;
-    return checkedStandardValues.includes(String(item.id));
-  });
-  const selectedOptionalFeature = optionalFeature.filter((item) => {
-    if (!item?.id) return false;
-    return checkedFeatureValues.includes(String(item.id));
-  });
+  const getSelectedStandardPackage = () => {
+    if (licenseId && previewFeature?.features?.standard) {
+      // Use existing data from API
+      return previewFeature.features.standard
+        .filter((item: any) => item.isUserSelect === true)
+        .map((item: any) => ({
+          id: item.feature?.id || item.id,
+          name: item.feature?.name || item.name,
+          price: item.price || 0,
+        }));
+    }
+
+    // Use current selection from form
+    return standardPackage.filter((item) => {
+      if (!item?.id) return false;
+      return checkedStandardValues.includes(String(item.id));
+    });
+  };
+
+  const getSelectedOptionalFeature = () => {
+    if (licenseId && previewFeature?.features?.optional) {
+      // Use existing data from API
+      return previewFeature.features.optional
+        .filter((item: any) => item.isUserSelect === true)
+        .map((item: any) => ({
+          id: item.feature?.id || item.id,
+          name: item.feature?.name || item.name,
+          price: item.price || 0,
+        }));
+    }
+
+    // Use current selection from form
+    return optionalFeature.filter((item) => {
+      if (!item?.id) return false;
+      return checkedFeatureValues.includes(String(item.id));
+    });
+  };
+
+  const selectedStandardPackage = getSelectedStandardPackage();
+  const selectedOptionalFeature = getSelectedOptionalFeature();
 
   const getStandardPrice = () => {
+    if (licenseId && previewFeature?.standardBasePrice !== undefined) {
+      return Number(previewFeature.standardBasePrice);
+    }
+
     const standardItem = basedPriceData?.basePrice?.find(
       (item: any) => item.name === "Standard"
     );
     return standardItem ? Number(standardItem.price) : 50000;
   };
+
   const getVatRate = () => {
+    if (licenseId && previewFeature?.vatPercent !== undefined) {
+      return Number(previewFeature.vatPercent) / 100;
+    }
+
     const standardItem = basedPriceData?.basePrice?.find(
       (item: any) => item.name === "Standard"
     );
@@ -111,7 +155,7 @@ const PreviewSummary = ({
   const total = subtotal + vatAmount;
 
   return (
-    <Card style={{ marginBottom: 12 }}>
+    <Card style={{ marginBottom: 12 }} className="previewSumCard">
       <Typography.Title
         level={4}
         style={{ color: "var(--primary-color)", margin: 0 }}
@@ -129,10 +173,11 @@ const PreviewSummary = ({
                   span={24}
                   style={{
                     border: "1px solid #C6C8C9",
-                    borderTopLeftRadius: 6,
-                    borderTopRightRadius: 6,
+                    borderTopLeftRadius: "8px",
+                    borderTopRightRadius: "8px",
                     backgroundColor: "#A6CBFF",
                     padding: 6,
+                    paddingInline: "20px",
                   }}
                 >
                   <Typography.Title
@@ -180,10 +225,11 @@ const PreviewSummary = ({
                   span={24}
                   style={{
                     border: "1px solid #C6C8C9",
-                    borderTopLeftRadius: 6,
-                    borderTopRightRadius: 6,
+                    borderTopLeftRadius: "8px",
+                    borderTopRightRadius: "8px",
                     backgroundColor: "#A6CBFF",
                     padding: 6,
+                    paddingInline: "20px",
                   }}
                 >
                   <Typography.Title
@@ -232,7 +278,11 @@ const PreviewSummary = ({
             >
               <Col
                 span={12}
-                style={{ borderRight: "1px solid #c6c8c9", padding: 6 }}
+                style={{
+                  borderRight: "1px solid #c6c8c9",
+                  padding: 6,
+                  paddingLeft: "20px",
+                }}
               >
                 <Text>VAT {(vatRate * 100).toFixed(0)}%</Text>
               </Col>

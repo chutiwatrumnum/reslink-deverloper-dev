@@ -6,7 +6,6 @@ import FormModal from "../../../../components/common/FormModal";
 import { callConfirmModal } from "../../../../components/common/Modal";
 import SmallButton from "../../../../components/common/SmallButton";
 // Types
-// Types
 import {
   SubDistrictDataType,
   ProjectManageType,
@@ -30,6 +29,10 @@ import subDistrictData from "../../json/subDistrict.json";
 
 // Google map
 import GoogleMapComponent from "../GoogleMapComponent";
+
+// CSS
+import "../../styles/stepModalCreate.css";
+import "../../styles/newProjectForm.css";
 
 type EditProjectModalPropsType = {
   data?: ProjectManageType;
@@ -60,8 +63,8 @@ const EditProjectModal = ({
 
   const onFinish = async (value: any) => {
     callConfirmModal({
-      title: "Request edit project?",
-      message: "Are you sure you want to request the new project?",
+      title: "Edit project",
+      message: "Are you sure you want to request the edit project?",
       okMessage: "Save",
       cancelMessage: "Cancel",
       onOk: async () => {
@@ -379,10 +382,11 @@ const EditProjectModal = ({
             <Col span={6}>
               <Form.Item label="Project name" name="name" rules={requiredRule}>
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input project name"
-                  maxLength={120}
+                  maxLength={60}
                   showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item
@@ -393,7 +397,7 @@ const EditProjectModal = ({
                 ]}
               >
                 <Radio.Group
-                  size="middle"
+                  size="large"
                   onChange={onChange}
                   value={value}
                   style={{
@@ -403,7 +407,6 @@ const EditProjectModal = ({
                     flexWrap: "wrap",
                     rowGap: 10,
                   }}
-                  disabled
                 >
                   {typeData?.map((item: any) => (
                     <Radio key={item.id} value={item.id.toString()}>
@@ -414,29 +417,42 @@ const EditProjectModal = ({
               </Form.Item>
               <Form.Item label="Address" name="address" rules={requiredRule}>
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input address"
-                  maxLength={120}
+                  maxLength={60}
                   showCount
-                  disabled
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item label="Soi" name="subStreet">
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input Soi"
                   maxLength={60}
                   showCount
-                  disabled
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item label="Road" name="road" rules={requiredRule}>
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input road"
                   maxLength={60}
                   showCount
-                  disabled
+                  className="inputCreateForm"
+                />
+              </Form.Item>
+              <Form.Item
+                label="Juristic phone number"
+                name="contactNumber"
+                rules={telRule}
+              >
+                <Input
+                  size="large"
+                  placeholder="Please input juristic phone"
+                  maxLength={10}
+                  showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
             </Col>
@@ -452,6 +468,7 @@ const EditProjectModal = ({
                 ]}
               >
                 <Select
+                  className="selectCreateForm"
                   value={countryValue}
                   options={optionCountry}
                   onSelect={onSelectCountry}
@@ -463,7 +480,7 @@ const EditProjectModal = ({
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  disabled
+                  size="large"
                 />
               </Form.Item>
               <Form.Item
@@ -473,11 +490,11 @@ const EditProjectModal = ({
                 hidden
               >
                 <Input
-                  size="middle"
+                  size="large"
                   maxLength={60}
                   showCount
                   value={timezone}
-                  disabled
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item
@@ -491,12 +508,13 @@ const EditProjectModal = ({
                 ]}
               >
                 <Select
+                  className="selectCreateForm"
+                  size="large"
                   value={provinceValue}
                   options={optionsProvince}
                   onSelect={onSelectProvince}
                   allowClear
                   showSearch
-                  disabled
                   placeholder="Please select province"
                   filterOption={(input, option) =>
                     (option?.label ?? "")
@@ -516,10 +534,11 @@ const EditProjectModal = ({
                 ]}
               >
                 <Select
+                  className="selectCreateForm"
+                  size="large"
                   value={districtValue}
                   options={optionsDistrict}
                   onSelect={onSelectDistrict}
-                  disabled
                   allowClear
                   showSearch
                   placeholder="Please select district"
@@ -541,9 +560,9 @@ const EditProjectModal = ({
                 ]}
               >
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input sub-district"
-                  disabled
+                  className="inputCreateForm"
                 />
               </Form.Item>
               <Form.Item
@@ -552,23 +571,11 @@ const EditProjectModal = ({
                 rules={requiredRule}
               >
                 <Input
-                  size="middle"
+                  size="large"
                   placeholder="Please input postal code"
                   maxLength={10}
                   showCount
-                  disabled
-                />
-              </Form.Item>
-              <Form.Item
-                label="Juristic phone number"
-                name="contactNumber"
-                rules={telRule}
-              >
-                <Input
-                  size="middle"
-                  placeholder="Please input juristic phone"
-                  maxLength={10}
-                  showCount
+                  className="inputCreateForm"
                 />
               </Form.Item>
             </Col>
@@ -584,7 +591,7 @@ const EditProjectModal = ({
                   },
                 ]}
               >
-                <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
+                <UploadImageWithCrop ratio="16:9 Ratio" height={180} />
               </Form.Item>
               <Form.Item
                 label="Logo project"
@@ -597,7 +604,11 @@ const EditProjectModal = ({
                   },
                 ]}
               >
-                <UploadImageWithCrop ratio="16:9 Ratio" height={140} />
+                <UploadImageWithCrop
+                  aspectRatio={1 / 1}
+                  ratio="1:1 Ratio"
+                  height={180}
+                />
               </Form.Item>
             </Col>
             {/* Google Map */}
@@ -634,7 +645,10 @@ const EditProjectModal = ({
           </Row>
           <Row>
             <Col span={24} style={{ justifyItems: "flex-end" }}>
-              <Form.Item style={{ margin: 0 }}>
+              <Form.Item
+                style={{ margin: 0 }}
+                className="buttonGroupCreateProject"
+              >
                 {/* ถ้า SmallButton ของคุณรองรับ loading ก็ใส่ loading={savingProject} ได้ */}
                 <SmallButton
                   className="saveButton"

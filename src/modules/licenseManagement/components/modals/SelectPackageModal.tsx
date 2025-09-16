@@ -1,6 +1,5 @@
-import { useState, useEffect, ReactNode } from "react";
-
-// Components
+// Imports
+import { useState, useEffect, ReactNode, useMemo } from "react";
 import ConfirmModal from "../../../../components/common/ConfirmModal";
 import {
   Col,
@@ -11,37 +10,40 @@ import {
   Divider,
   Checkbox,
   Flex,
-  Upload,
-  Spin,
-  message,
   Typography,
+  message,
 } from "antd";
 import StepBar from "../stepRequestNewProject/StepBar";
 import StepModal from "../stepRequestNewProject/StepModal";
 import PreviewSummary from "../stepRequestNewProject/PreviewSummary";
-
-// CSS
+import UploadImagePayment from "../UploadImagePayment";
+import SmallButton from "../../../../components/common/SmallButton";
+import { openInvoicePdf } from "../InvoicePDF";
 import "../../styles/stepModalCreate.css";
 import "../../styles/newProjectForm.css";
+import {
+  FeaturesDataType,
+  StepStatus,
+  CreateInvoicePackageType,
+  PaymentUpdate,
+  InvoiceData,
+} from "../../../../stores/interfaces/ProjectManage";
+import successPaymentImage from "../../../../assets/images/success-payment.png";
+import { DeleteOutlined } from "@ant-design/icons";
+import { useEditProjectManagementPaymentMutation } from "../../../../utils/mutationsGroup/projectManagement";
+import { postCreatePackageInvoiceMutation } from "../../../../utils/mutationsGroup/licenseMutations";
+import { useFeaturesAndProjectByIdQuery } from "../../../../utils/queriesGroup/projectManagementQueries";
+import { getLicenseFeaturesDashboardQuery } from "../../../../utils/queriesGroup/licenseQueries";
 
 // Types
-import { StepStatus } from "../../../../stores/interfaces/ProjectManage";
-import type { CheckboxOptionType, UploadProps } from "antd";
-
-//Image
-import successPaymentImage from "../../../../assets/images/success-payment.png";
-
-//Icons
-import { InboxOutlined } from "@ant-design/icons";
-
-// Data & APIs
-import { requiredRule } from "../../../../configs/inputRule";
-
 type SelectPackageModalPropsType = {
   isSelectPackageModalOpen: boolean;
   onCancel: () => void;
+  onNextStep: () => void;
+  licenseId?: string | null;
+  projectId?: string;
+  currentStep: number;
 };
-
 type stepsType = {
   stepTitle: string;
   title: string;
@@ -49,460 +51,658 @@ type stepsType = {
   content: ReactNode;
 };
 
+// Component: SelectPackageModal
 const SelectPackageModal = ({
   onCancel,
+  onNextStep,
   isSelectPackageModalOpen,
+  licenseId: useLicenseId,
+  projectId,
+  currentStep,
 }: SelectPackageModalPropsType) => {
-  const [projectForm] = Form.useForm();
+  // Forms
   const [packageForm] = Form.useForm();
   const [payForm] = Form.useForm();
 
+  // State
   const [open, setOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    setOpen(isSelectPackageModalOpen);
-  }, [isSelectPackageModalOpen]);
-
-  // Step status management
-  const [currentStep, setCurrentStep] = useState(1);
-
-  const getStepStatus = (index: number): StepStatus => {
-    if (index + 1 < currentStep) return "completed";
-    if (index + 1 === currentStep) return "active";
-    return "pending";
-  };
-
-  const handleStepClick = (stepIndex: number) => {
-    if (stepIndex + 1 <= currentStep) {
-      setCurrentStep(stepIndex + 1);
-    }
-  };
-
-  const Stepper = () => {
-    return (
-      <div className="stepperStyle">
-        {steps.map((step, index) => (
-          <StepBar
-            key={index}
-            title={step.stepTitle}
-            status={getStepStatus(index)}
-            onClick={() => handleStepClick(index)}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  // Configuring Ant Design components
-  const { Dragger } = Upload;
-  const { Text } = Typography;
-
-  // Upload slip in step 3: Pay
-  const [previewPoofPayment, setPreviewProofPayment] = useState<string | null>(
-    null
-  );
-
-  const props: UploadProps = {
-    name: "file",
-    multiple: false,
-    showUploadList: false, // 👈 hide default list
-    action: "https://660d2bd96ddfa2943b33731c.mockapi.io/api/upload",
-    beforeUpload: (file) => {
-      // create preview immediately
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        setPreviewProofPayment(reader.result as string);
-      };
-      return true; // continue upload
-    },
-    onChange(info) {
-      const { status } = info.file;
-      if (status === "done") {
-        message.success(`${info.file.name} uploaded successfully`);
-      } else if (status === "error") {
-        message.error(`${info.file.name} upload failed`);
-      }
-    },
-  };
-
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // State for checkbox standard package and optional feature values
+  const [previewProofPayment, setPreviewProofPayment] = useState("");
+  const [isSuccessPayment, setIsSuccessPayment] = useState<boolean>(false);
   const [checkedStandardValues, setCheckedStandardValues] = useState<string[]>(
     []
   );
   const [checkedFeatureValues, setCheckedFeatureValues] = useState<string[]>(
     []
   );
+  const [licenseId, setLicenseId] = useState<string | null>(
+    useLicenseId || null
+  );
 
-  // Standard package and optional features
-  const standardPackage: CheckboxOptionType<string>[] = [
-    { label: "Contact list", value: "contactList" },
-    { label: "Document form", value: "documentForm" },
-    { label: "Events", value: "events" },
-    { label: "Fixing report", value: "fixingReport" },
-    { label: "Home automation", value: "homeAutomation" },
-    { label: "Left home with guard", value: "leftHomeWithGuard" },
-    { label: "Live chat", value: "liveChat" },
-    { label: "Maintenance guide", value: "maintenanceGuide" },
-    { label: "My pets", value: "myPets" },
-    { label: "News and announcement", value: "newsAndAnnouncement" },
-    { label: "Notifications", value: "notifications" },
-    { label: "Parcel alert", value: "parcelAlert" },
-    { label: "Services", value: "services" },
-    { label: "SOS", value: "sos" },
-    { label: "Warranty tracking", value: "warrantyTracking" },
-    { label: "Weather forecast", value: "weatherForecast" },
-  ];
-  const optionalFeature: CheckboxOptionType<string>[] = [
-    { label: "Bill and payment", value: "billAndPayment" },
-    { label: "Privilege", value: "privilege" },
-    { label: "Facility booking", value: "facilityBooking" },
-    { label: "Vehicle management", value: "vehicleManagement" },
-    { label: "Facility fixing report", value: "facilityFixingReport" },
-    { label: "Visitor management", value: "visitorManagement" },
-    { label: "People counting", value: "peopleCounting" },
-    { label: "E-stamp", value: "eStamp" },
-  ];
+  // Queries & Mutations
+  const { data: featuresData } = getLicenseFeaturesDashboardQuery();
+  const createPackageInvoice = postCreatePackageInvoiceMutation();
+  const updatePayment = useEditProjectManagementPaymentMutation();
+  const { data: featureAndBankPreview } = useFeaturesAndProjectByIdQuery(
+    licenseId!
+  );
+  console.log(featureAndBankPreview);
 
-  //Content Step 1: Select Package
-  const PackageForm = () => {
-    return (
-      <Form
-        form={packageForm}
-        name="packageForm"
-        initialValues={{ remember: true }}
-        autoComplete="off"
-        layout="vertical"
-        onFinish={onSelectPackageFinish}
-        onFinishFailed={() => {
-          console.log("FINISHED FAILED");
-        }}
-      >
-        <Row gutter={20} style={{ paddingInline: "12px" }}>
-          <Col span={14}>
-            <Row>
-              <Col span={24}>
-                {/* Standard Package Card */}
-                <Card style={{ marginBottom: 12 }}>
-                  <Typography.Title
-                    level={4}
-                    style={{ color: "var(--primary-color)" }}
-                  >
-                    Standard package
-                  </Typography.Title>
-                  <Text type="secondary">
-                    This is the standard package included in the base price. You
-                    can also select additional optional features in the box
-                    below.
-                  </Text>
-                  <Form.Item name="standardPackage" style={{ marginTop: 24 }}>
-                    <Checkbox.Group
-                      style={{ width: "100%" }}
-                      value={checkedStandardValues}
-                      onChange={setCheckedStandardValues}
-                    >
-                      <Row gutter={10}>
-                        {standardPackage.map((item, index) => (
-                          <Col span={12} key={index}>
-                            <Checkbox
-                              value={item.value}
-                              className="packageBoxCustom"
+  // Derived data
+  const { Text } = Typography;
+  const bankName = featureAndBankPreview?.bank?.bankName || "";
+  const accountNo = featureAndBankPreview?.bank?.accountNo || "";
+  const accountName = featureAndBankPreview?.bank?.accountName || "";
+  const allStandardIds = useMemo(
+    () => (featuresData?.standard ?? []).map((it: any) => String(it.id)),
+    [featuresData]
+  );
+  const optionalList = useMemo(
+    () =>
+      (featuresData?.optional ?? []).map((f: any) => ({
+        id: String(f.id),
+        name: f.name,
+        price: Number(f.price ?? 0),
+        featureBundles: f.featureBundles || [], // [{ featuresId, bundleFeaturesId }]
+      })),
+    [featuresData?.optional]
+  );
+  const isAllSelected = checkedStandardValues.length === allStandardIds.length;
+
+  // Effects
+  useEffect(() => {
+    setOpen(isSelectPackageModalOpen);
+    if (isSelectPackageModalOpen) {
+      resetAllStates();
+      setLicenseId(useLicenseId || null);
+    }
+  }, [isSelectPackageModalOpen, useLicenseId]);
+
+  useEffect(() => {
+    if (!!licenseId && !!featureAndBankPreview?.features) {
+      try {
+        const standardFeatures = featureAndBankPreview.features.standard || [];
+        const optionalFeatures = featureAndBankPreview.features.optional || [];
+
+        // selected standard features
+        const selectedStandardIds = standardFeatures
+          .filter((item: any) => item.isUserSelect === true)
+          .map((item: any) => String(item.feature?.id || item.id));
+
+        // selected optional features
+        const selectedOptionalIds = optionalFeatures
+          .filter((item: any) => item.isUserSelect === true)
+          .map((item: any) => String(item.feature?.id || item.id));
+
+        setCheckedStandardValues(selectedStandardIds);
+        setCheckedFeatureValues(selectedOptionalIds);
+
+        // Update form values
+        packageForm.setFieldsValue({
+          standardPackage: selectedStandardIds,
+          optionalFeature: selectedOptionalIds,
+        });
+      } catch (error) {
+        console.error("Error loading existing features:", error);
+      }
+    }
+  }, [licenseId, featureAndBankPreview, packageForm]);
+
+  // Helpers
+  const resetAllStates = () => {
+    packageForm.resetFields();
+    payForm.resetFields();
+    setCheckedStandardValues([]);
+    setCheckedFeatureValues([]);
+    setIsSuccessPayment(false);
+    setPreviewProofPayment("");
+    setLicenseId(null);
+  };
+  const getStepStatus = (index: number): StepStatus => {
+    if (index + 1 < currentStep) return "completed";
+    if (index + 1 === currentStep) return "active";
+    return "pending";
+  };
+
+  // Handlers - Standard
+  const onToggleSelectAllStandard = (value: boolean) => {
+    if (value) {
+      setCheckedStandardValues(allStandardIds);
+      packageForm.setFieldsValue({ standardPackage: allStandardIds });
+    } else {
+      setCheckedStandardValues([]);
+      packageForm.setFieldsValue({ standardPackage: [] });
+    }
+  };
+
+  const OPTIONAL_LIMIT = 8;
+
+  const handleOptionalChange = (values: string[]) => {
+    // ทำ id ให้เป็น string เสมอ
+    const input = Array.from(new Set(values.map(String)));
+
+    // ----- บังคับลำดับชั้น parent bundle (เหมือน A) -----
+    const filteredByParent = input.filter((id) => {
+      const feature = optionalList.find((f: any) => f.id === id);
+      if (!feature) return true;
+
+      // หา parent ของ id นี้ จากทุกฟีเจอร์ที่มี bundle pointing มาหา id นี้
+      const parentBundles = optionalList.flatMap(
+        (f: any) =>
+          f.featureBundles?.filter(
+            (b: any) => String(b.bundleFeaturesId) === id
+          ) || []
+      );
+      const requiredParents = parentBundles.map((b: any) =>
+        String(b.featuresId)
+      );
+
+      return (
+        requiredParents.length === 0 ||
+        requiredParents.some((pid: string) => input.includes(pid))
+      );
+    });
+
+    // ----- จำกัดไม่เกิน 8 รายการ -----
+    let next = filteredByParent;
+    if (filteredByParent.length > OPTIONAL_LIMIT) {
+      message.warning(
+        `You can select up to ${OPTIONAL_LIMIT} optional features.`
+      );
+      next = filteredByParent.slice(0, OPTIONAL_LIMIT);
+    }
+
+    setCheckedFeatureValues(next);
+    packageForm.setFieldsValue({ optionalFeature: next });
+
+    // ถ้าในระบบคุณต้องเก็บ features ไว้ใน hidden field (เช่น JSON) ให้ตั้งค่าที่นี่ด้วย
+    // ตัวอย่าง: เก็บเป็น array ของ id อย่างเดียว
+    packageForm.setFieldsValue({ features: next });
+  };
+
+  // Actions - Invoice
+  const onCreateInvoicePackage = async (data: InvoiceData) => {
+    try {
+      await openInvoicePdf(data);
+      onNextStep();
+    } catch (error) {
+      console.log("Error create invoice", error);
+    }
+  };
+  const onFinishSelectedPackage = async (values: CreateInvoicePackageType) => {
+    try {
+      if (!projectId) {
+        message.error("Project ID is missing. Please try again.");
+        return;
+      }
+
+      // Parse features from JSON string
+      let parsedFeatures: any[] = [];
+      if (typeof values.features === "string") {
+        try {
+          parsedFeatures = JSON.parse(values.features);
+        } catch (e) {
+          console.error("Error parsing features:", e);
+          parsedFeatures = [];
+        }
+      } else if (Array.isArray(values.features)) {
+        parsedFeatures = values.features;
+      }
+
+      const vat = 7;
+      const payload: CreateInvoicePackageType = {
+        projectId: projectId, // mock project
+        standardBasePrice: Number(values.standardBasePrice || 0),
+        optionalBasePrice: Number(values.optionalBasePrice || 0),
+        totalStandard: Number(values.totalStandard || 0),
+        totalOptional: Number(values.totalOptional || 0),
+        vatPercent: Number(values.vatPercent?.toFixed(0) || vat.toFixed(0)),
+        totalVat: Number(values.totalVat || 0),
+        totalPrice: Number(values.totalPrice || 0),
+        totalPriceWithVat: Number(values.totalPriceWithVat || 0),
+        features: parsedFeatures,
+      };
+      // console.log("Payload result:", payload);
+      await createPackageInvoice.mutateAsync(payload).then(async (res) => {
+        console.log("Create invoice response:", res);
+
+        await onCreateInvoicePackage(res.data.result.pdf);
+        const licenseId = res.data?.result?.licenseId;
+        setLicenseId(licenseId);
+      });
+      onNextStep();
+    } catch (error: any) {
+      console.error("Error creating invoice:", error);
+      message.error(
+        error.response.data.message ??
+          "Failed to create invoice. Please try again."
+      );
+    }
+  };
+
+  // Handlers - Payment
+  const handleDeleteProofPayment = () => {
+    setPreviewProofPayment("");
+    payForm.resetFields(["file"]);
+  };
+  const onFinishPayForm = async (values: PaymentUpdate) => {
+    try {
+      if (!licenseId) {
+        message.error("License ID is missing, please try again");
+        return;
+      }
+      const payload: PaymentUpdate = { id: licenseId, file: values.file };
+      await updatePayment
+        .mutateAsync({ id: licenseId, payload })
+        .then((res) => {
+          console.log("update payment respond: ", res);
+        });
+      setIsSuccessPayment(true);
+    } catch (error) {
+      message.error("Failed to submit payment, please try again.");
+    }
+  };
+
+  // UI - Stepper
+  const Stepper = () => (
+    <div className="stepperStyle">
+      {steps.map((step, index) => (
+        <StepBar
+          key={index}
+          title={step.stepTitle}
+          status={getStepStatus(index)}
+        />
+      ))}
+    </div>
+  );
+
+  // UI - PackageForm
+  const PackageForm = () => (
+    <Form
+      form={packageForm}
+      name="packageForm"
+      autoComplete="off"
+      layout="vertical"
+      onFinish={onFinishSelectedPackage}
+    >
+      {/* Hidden fields */}
+      <Form.Item name="standardBasePrice" hidden>
+        <input />
+      </Form.Item>
+      <Form.Item name="optionalBasePrice" hidden>
+        <input />
+      </Form.Item>
+      <Form.Item name="totalStandard" hidden>
+        <input />
+      </Form.Item>
+      <Form.Item name="totalOptional" hidden>
+        <input />
+      </Form.Item>
+      <Form.Item name="totalPrice" hidden>
+        <input />
+      </Form.Item>
+      <Form.Item name="totalVat" hidden>
+        <input />
+      </Form.Item>
+      <Form.Item name="vatPercent" hidden initialValue={7}>
+        <input />
+      </Form.Item>
+      <Form.Item name="totalPriceWithVat" hidden>
+        <input />
+      </Form.Item>
+      <Form.Item name="features" hidden>
+        <input />
+      </Form.Item>
+
+      <Row gutter={20} style={{ paddingInline: "12px" }}>
+        <Col span={14}>
+          <Card style={{ marginBottom: 12 }}>
+            <Typography.Title
+              level={4}
+              style={{ color: "var(--primary-color)" }}
+            >
+              Standard package
+            </Typography.Title>
+            <Text type="secondary">
+              This is the standard package included in the base price. You can
+              also select additional optional features in the box below.
+            </Text>
+            {/* Select-all checkbox */}
+            <Flex
+              justify="space-between"
+              align="center"
+              style={{ marginTop: 16, marginBottom: 16 }}
+            >
+              <Checkbox
+                checked={isAllSelected}
+                onChange={(e) => onToggleSelectAllStandard(e.target.checked)}
+              >
+                Buy or Renew Standard Package
+              </Checkbox>
+            </Flex>
+            <Form.Item
+              name="standardPackage"
+              style={{ marginTop: 24 }}
+              initialValue={checkedStandardValues}
+            >
+              <Checkbox.Group
+                value={checkedStandardValues}
+                // onChange={handleStandardChange}
+              >
+                <Row gutter={10}>
+                  {featuresData?.standard?.map(
+                    (item: FeaturesDataType, index: number) => {
+                      const isChecked = checkedStandardValues.includes(
+                        item.id as string
+                      );
+                      return (
+                        <Col span={12} key={index}>
+                          <Checkbox
+                            disabled={item.isDefault === true}
+                            value={item.id}
+                            className="packageBoxCustom"
+                            style={{
+                              borderColor: isChecked
+                                ? "var(--secondary-color)"
+                                : "#EBEBEB",
+                            }}
+                          >
+                            {item.name}
+                          </Checkbox>
+                        </Col>
+                      );
+                    }
+                  )}
+                </Row>
+              </Checkbox.Group>
+            </Form.Item>
+          </Card>
+
+          <Card style={{ marginBottom: 12 }}>
+            <Typography.Title
+              level={4}
+              style={{ color: "var(--primary-color)" }}
+            >
+              Optional features
+            </Typography.Title>
+            <Text type="secondary">
+              You can add up to 8 optional features to enhance your experience.
+            </Text>
+            <Form.Item name="optionalFeature" style={{ marginTop: 24 }}>
+              <Checkbox.Group
+                value={checkedFeatureValues}
+                onChange={handleOptionalChange}
+                className="optionalFeature"
+              >
+                <Row gutter={10}>
+                  {optionalList.map((item: any, index: any) => {
+                    // หา parent ที่อ้างถึง item.id
+                    const parentBundles = optionalList.flatMap(
+                      (f: any) =>
+                        f.featureBundles?.filter(
+                          (b: any) => String(b.bundleFeaturesId) === item.id
+                        ) || []
+                    );
+                    const requiredParents = parentBundles.map((b: any) =>
+                      String(b.featuresId)
+                    );
+                    const isParentChecked =
+                      requiredParents.length === 0 ||
+                      requiredParents.some((pid: any) =>
+                        checkedFeatureValues.includes(pid)
+                      );
+
+                    const isChecked = checkedFeatureValues.includes(item.id);
+
+                    return (
+                      <Col span={12} key={index}>
+                        <Checkbox
+                          value={item.id}
+                          disabled={!isParentChecked}
+                          className="packageBoxCustom"
+                          style={{
+                            borderColor: isChecked
+                              ? "var(--secondary-color)"
+                              : "#EBEBEB",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <span>{item.name}</span>
+                            <span
                               style={{
-                                borderColor: checkedStandardValues.includes(
-                                  item.value
-                                )
-                                  ? "var(--secondary-color)"
-                                  : "#EBEBEB",
+                                color: isChecked
+                                  ? "var(--success-color)"
+                                  : "#3f3f3f",
+                                fontWeight: isChecked ? 600 : 300,
                               }}
                             >
-                              {item.label}
-                            </Checkbox>
-                          </Col>
-                        ))}
-                      </Row>
-                    </Checkbox.Group>
-                  </Form.Item>
-                </Card>
-                {/* Optional Features Card */}
-                <Card style={{ marginBottom: 12 }}>
-                  <Typography.Title
-                    level={4}
-                    style={{ color: "var(--primary-color)" }}
-                  >
-                    Optional features
-                  </Typography.Title>
-                  <Text type="secondary">
-                    You can add up to 8 optional features to enhance your
-                    experience.
-                  </Text>
-                  <Form.Item name="optionalFeature" style={{ marginTop: 24 }}>
-                    <Checkbox.Group
-                      style={{ width: "100%" }}
-                      value={checkedFeatureValues}
-                      onChange={setCheckedFeatureValues}
-                    >
-                      <Row gutter={10}>
-                        {optionalFeature.map((item, index) => (
-                          <Col span={12} key={index}>
-                            <Checkbox
-                              value={item.value}
-                              className="packageBoxCustom"
-                              style={{
-                                borderColor: checkedFeatureValues.includes(
-                                  item.value
-                                )
-                                  ? "var(--secondary-color)"
-                                  : "#EBEBEB",
-                              }}
-                            >
-                              {item.label}
-                            </Checkbox>
-                          </Col>
-                        ))}
-                      </Row>
-                    </Checkbox.Group>
-                  </Form.Item>
-                </Card>
-              </Col>
-            </Row>
-          </Col>
-          <Col span={10}>
-            <Row>
-              <Col span={24}>
-                {/* Preview Summary Card */}
-                <PreviewSummary
-                  checkedStandardValues={checkedStandardValues}
-                  checkedFeatureValues={checkedFeatureValues}
-                  standardPackage={standardPackage}
-                  optionalFeature={optionalFeature}
-                />
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-        <Row style={{ paddingBlock: 12 }}>
-          <Col span={24}>
-            <Flex gap={10} justify="center" align="center">
+                              {item.price.toLocaleString()}
+                            </span>
+                          </div>
+                        </Checkbox>
+                      </Col>
+                    );
+                  })}
+                </Row>
+              </Checkbox.Group>
+            </Form.Item>
+          </Card>
+        </Col>
+
+        <Col span={10}>
+          <PreviewSummary
+            form={packageForm}
+            checkedStandardValues={checkedStandardValues}
+            checkedFeatureValues={checkedFeatureValues}
+            standardPackage={featuresData?.standard || []}
+            optionalFeature={featuresData?.optional || []}
+          />
+        </Col>
+      </Row>
+
+      <Row style={{ marginTop: 24 }}>
+        <Col span={24}>
+          <Flex justify="center" align="center">
+            <Form.Item>
               <Button
                 type="text"
                 size="large"
                 onClick={onSkipPackageForm}
-                style={{ width: 200, borderColor: "var(--secondary-color)" }}
+                style={{
+                  width: 200,
+                  borderColor: "var(--secondary-color)",
+                  marginRight: 12,
+                }}
               >
                 Skip
               </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="large"
-                style={{ width: 200 }}
-                disabled={
-                  (checkedStandardValues.length ||
-                    checkedFeatureValues.length) === 0 || isLoading
-                }
-                icon={isLoading ? <Spin size="small" /> : <></>}
-              >
-                {(checkedStandardValues.length ||
-                  checkedFeatureValues.length) === 0
-                  ? "Next"
-                  : "Create invoice"}
-              </Button>
+              <SmallButton
+                form={packageForm}
+                message="Create invoice"
+                className="saveButton"
+              />
+            </Form.Item>
+          </Flex>
+        </Col>
+      </Row>
+    </Form>
+  );
+
+  // UI - PayForm
+  const PayForm = () => (
+    <Form
+      form={payForm}
+      name="payForm"
+      autoComplete="off"
+      layout="vertical"
+      onFinish={onFinishPayForm}
+    >
+      <Row gutter={20} style={{ paddingInline: "12px" }}>
+        <Col span={14}>
+          <Card style={{ marginBottom: 12 }}>
+            <Typography.Title
+              level={4}
+              style={{ color: "var(--primary-color)" }}
+            >
+              Bank transfer
+            </Typography.Title>
+            <Divider />
+            <Flex vertical={true} style={{ color: "var(--primary-color)" }}>
+              <p>
+                Bank: <b>{bankName}</b>
+              </p>
+              <p>
+                Account no.: <b>{accountNo}</b>
+              </p>
+              <p>
+                Account name: <b>{accountName}</b>
+              </p>
             </Flex>
-          </Col>
-        </Row>
-      </Form>
-    );
-  };
-  // Content Step 2: Pay
-  const PayForm = () => {
-    return (
-      <Form
-        form={payForm}
-        name="payForm"
-        initialValues={{ remember: true }}
-        autoComplete="off"
-        layout="vertical"
-        // onFinish={onPayFinish}
-        // onFinishFailed={() => {
-        //   console.log("FINISHED FAILED");
-        // }}
-      >
-        <Row gutter={20} style={{ paddingInline: "12px" }}>
-          <Col span={14}>
-            <Card style={{ marginBottom: 12 }}>
-              <Typography.Title
-                level={4}
-                style={{ color: "var(--primary-color)" }}
-              >
-                Bank transfer
-              </Typography.Title>
-              <Divider />
-              <Flex vertical={true} style={{ color: "var(--primary-color)" }}>
-                <p>
-                  Bank: <b>Kasikorn Bank</b>
-                </p>
-                <p>
-                  Account no.: <b>1234567890</b>
-                </p>
-                <p>
-                  Account name: <b>Lifestyletechnogies</b>
-                </p>
-              </Flex>
-              <Divider />
-              <Typography.Title
-                level={5}
-                style={{ color: "var(--primary-color)", marginBottom: 12 }}
-              >
-                Upload proof of payment
-              </Typography.Title>
-              <Form.Item
-                name="proofPayment"
-                valuePropName="file"
-                getValueFromEvent={(e) => (e?.file ? e.file : null)}
-                rules={requiredRule}
-              >
-                <Dragger {...props} accept=".png,.jpg,.jpeg" height={400}>
-                  <Flex
-                    style={{ width: "100%" }}
-                    justify="center"
-                    align="center"
-                    vertical={true}
-                  >
-                    {!previewPoofPayment ? (
-                      <div style={{ width: "60%" }}>
-                        <p className="ant-upload-drag-icon">
-                          <InboxOutlined />
-                        </p>
-                        <Typography.Title level={5}>
-                          Click or drag file to this area to upload
-                        </Typography.Title>
-                        <Flex vertical={true} style={{ margin: 0 }}>
-                          <Text type="secondary">
-                            Support for a single or bulk upload.
-                          </Text>
-                          <Text type="secondary">
-                            Strictly prohibited from uploading company data or
-                            other banned files.
-                          </Text>
-                        </Flex>
-                      </div>
-                    ) : (
-                      <img
-                        src={previewPoofPayment}
-                        alt="Preview"
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: 350,
-                          objectFit: "contain",
-                        }}
+            <Divider />
+            <Typography.Title
+              level={5}
+              style={{ color: "var(--primary-color)", marginBottom: 12 }}
+            >
+              Upload proof of payment
+            </Typography.Title>
+            <Form.Item
+              name="file"
+              rules={[
+                { required: true, message: "Please upload proof of payment!" },
+              ]}
+            >
+              <UploadImagePayment
+                onChange={(url) => {
+                  setPreviewProofPayment(url);
+                  payForm.setFieldValue("file", url);
+                }}
+                image={previewProofPayment}
+                height={280}
+              />
+              {previewProofPayment && (
+                <Flex justify="end" style={{ marginTop: 4 }}>
+                  <Button
+                    type="text"
+                    size="middle"
+                    icon={
+                      <DeleteOutlined
+                        style={{ color: "var(--danger-color)" }}
                       />
-                    )}
-                  </Flex>
-                </Dragger>
-              </Form.Item>
-            </Card>
-          </Col>
-          <Col span={10}>
-            <PreviewSummary
-              checkedStandardValues={checkedStandardValues}
-              checkedFeatureValues={checkedFeatureValues}
-              standardPackage={standardPackage}
-              optionalFeature={optionalFeature}
-            />
-          </Col>
-        </Row>
-        <Row style={{ paddingBlock: 12 }}>
-          <Col span={24}>
-            <Flex gap={10} justify="center" align="center">
+                    }
+                    onClick={handleDeleteProofPayment}
+                    style={{ color: "var(--danger-color)" }}
+                  >
+                    Change image
+                  </Button>
+                </Flex>
+              )}
+            </Form.Item>
+          </Card>
+        </Col>
+
+        <Col span={10}>
+          <PreviewSummary
+            form={packageForm}
+            checkedStandardValues={checkedStandardValues}
+            checkedFeatureValues={checkedFeatureValues}
+            standardPackage={featuresData?.standard || []}
+            optionalFeature={featuresData?.optional || []}
+            licenseId={licenseId}
+          />
+        </Col>
+      </Row>
+
+      <Row style={{ paddingTop: 12 }}>
+        <Col span={24}>
+          <Flex gap={10} justify="center" align="center">
+            <Form.Item>
               <Button
                 type="text"
                 size="large"
-                style={{ width: 200, borderColor: "var(--secondary-color)" }}
+                style={{
+                  width: 200,
+                  borderColor: "var(--secondary-color)",
+                  marginRight: 12,
+                }}
                 onClick={onSkipPaymentForm}
               >
                 Skip
               </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="large"
-                style={{ width: 200 }}
-                disabled={isLoading}
-                icon={isLoading ? <Spin size="small" /> : <></>}
-              >
-                Submit
-              </Button>
-            </Flex>
-          </Col>
-        </Row>
-      </Form>
-    );
-  };
+              <SmallButton
+                form={payForm}
+                message="Submit"
+                className="saveButton"
+              />
+            </Form.Item>
+          </Flex>
+        </Col>
+      </Row>
+    </Form>
+  );
 
-  // Content display success payment
-  const PaySuccessPage = () => {
-    return (
+  // UI - PaySuccessPage
+  const PaySuccessPage = () => (
+    <Flex
+      vertical
+      justify="center"
+      align="center"
+      style={{ padding: 24, marginBottom: 48 }}
+    >
       <Flex
-        vertical={true}
+        style={{
+          width: 200,
+          height: 200,
+          padding: 24,
+          borderRadius: "50%",
+          backgroundColor: "#D3F8D6",
+          marginBottom: 24,
+        }}
         justify="center"
         align="center"
-        style={{ padding: 24 }}
       >
-        <Flex
-          style={{
-            width: 200,
-            height: 200,
-            padding: 24,
-            borderRadius: "50%",
-            backgroundColor: "#D3F8D6",
-            marginBottom: 24,
-          }}
-          justify="center"
-          align="center"
-        >
-          <img src={successPaymentImage} style={{ width: "80%" }} />
-        </Flex>
-        <Typography.Title level={4} style={{ color: "#002C55" }}>
-          Thank you for your payment!
-        </Typography.Title>
-        <Flex
-          vertical={true}
-          justify="center"
-          align="center"
-          style={{ marginBottom: 24 }}
-        >
-          <Text style={{ color: "#002C55" }}>
-            Your payment slip has been submitted.
-          </Text>
-          <Text style={{ color: "#002C55" }}>
-            We{`’`}re verifying your payment and will notify you once your
-            license is activated.
-          </Text>
-          <Text style={{ color: "#002C55" }}>
-            Verification usually takes 1{`–`}2 business days during working
-            time.
-          </Text>
-        </Flex>
-        <Button
-          size="large"
-          type="primary"
-          style={{ width: 250 }}
-          onClick={onCancel}
-        >
-          Go to dashboard
-        </Button>
+        <img src={successPaymentImage} style={{ width: "80%" }} />
       </Flex>
-    );
-  };
+      <Typography.Title level={4} style={{ color: "#002C55" }}>
+        Thank you for your payment!
+      </Typography.Title>
+      <Flex
+        vertical
+        justify="center"
+        align="center"
+        style={{ marginBottom: 24 }}
+      >
+        <Text style={{ color: "#002C55" }}>
+          Your payment slip has been submitted.
+        </Text>
+        <Text style={{ color: "#002C55" }}>
+          We{"'"}re verifying your payment and will notify you once your license
+          is activated.
+        </Text>
+        <Text style={{ color: "#002C55" }}>
+          Verification usually takes 1–2 business days during working time.
+        </Text>
+      </Flex>
+      <Button
+        size="large"
+        type="primary"
+        style={{ width: 250 }}
+        onClick={onCancel}
+      >
+        Go to dashboard
+      </Button>
+    </Flex>
+  );
 
-  const [isSuccessPayment, setIsSuccessPayment] = useState<boolean>(false);
+  // UI - Payment step switch
+  const PaymentStep = () =>
+    isSuccessPayment ? <PaySuccessPage /> : <PayForm />;
 
-  const PaymentStep = () => {
-    return isSuccessPayment ? <PaySuccessPage /> : <PayForm />;
-  };
-
+  // Steps config
   const steps: stepsType[] = [
     {
       stepTitle: "Select package",
@@ -522,123 +722,55 @@ const SelectPackageModal = ({
     },
   ];
 
+  // Handlers - Modal close/skip
   const onModalClose = () => {
-    projectForm.resetFields();
-    packageForm.resetFields();
-    payForm.resetFields();
+    resetAllStates();
     onCancel();
   };
 
-  const onSavePackageForm = async (values: any) => {
-    setIsLoading(true);
-    try {
-      console.log("Saving package: ", values);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      setCurrentStep(Math.min(steps.length, currentStep + 1));
-    } catch (error) {
-      console.error("Error saving package:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onSelectPackageFinish = (values: any) => {
-    console.log("Form values:", values);
-    onSavePackageForm(values);
-    onCreateInvoicePackage();
-  };
-
-  const onSavePayForm = async (values: any) => {
-    setIsLoading(true);
-    try {
-      console.log("Saving pay: ", values);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      setCurrentStep(Math.min(steps.length, currentStep + 1));
-      setIsSuccessPayment(true);
-    } catch (error) {
-      console.error("Error saving pay:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onPayFinish = (values: any) => {
-    console.log("Form values:", values);
-    onSavePayForm(values);
-  };
-
-  const onCreateInvoicePackage = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate API call to generate invoice/PDF
-      await new Promise((resolve) => setTimeout(resolve, 4000));
-      // Mock PDF URL
-      const pdfUrl =
-        "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
-      window.open(pdfUrl, "_blank");
-      setCurrentStep(Math.min(steps.length, currentStep + 1));
-    } catch (error) {
-      console.log("Error create invoice", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onSkipPackageForm = async (value: any) => {
+  const onSkipPackageForm = async () => {
     ConfirmModal({
       title: "You want to exit the Select package.",
       message: "Do you want to exit the Select package?",
       okMessage: "Confirm",
       cancelMessage: "Cancel",
       onOk: async () => {
-        console.log(value);
+        resetAllStates();
         onModalClose();
-        packageForm.resetFields();
-        setCheckedStandardValues([]);
-        setCheckedFeatureValues([]);
       },
     });
   };
 
-  const onSkipPaymentForm = async (value: any) => {
+  const onSkipPaymentForm = async () => {
     ConfirmModal({
       title: "You want to exit complete your payment.",
       message: "Do you want to exit Complete your payment?",
       okMessage: "Confirm",
       cancelMessage: "Cancel",
       onOk: async () => {
-        console.log(value);
+        resetAllStates();
         onModalClose();
-        payForm.resetFields();
-        setPreviewProofPayment("");
       },
     });
   };
 
+  // Render
   return (
-    <>
-      <StepModal isOpen={open} header={<Stepper />} onClose={onModalClose}>
-        <Row style={{ marginTop: 12, marginBottom: 12 }}>
-          <Col
-            span={24}
-            style={{
-              justifyItems: "center",
-            }}
-          >
-            <h4 style={{ color: "var(--primary-color)", fontSize: "18px" }}>
-              {steps[currentStep - 1]?.title}
-            </h4>
-            <p style={{ color: "var(--secondary-color)" }}>
-              {steps[currentStep - 1]?.description}
-            </p>
-          </Col>
-        </Row>
-        {steps[currentStep - 1]?.content}
-      </StepModal>
-    </>
+    <StepModal isOpen={open} header={<Stepper />} onClose={onModalClose}>
+      <Row style={{ marginTop: 12, marginBottom: 12 }}>
+        <Col span={24} style={{ justifyItems: "center" }}>
+          <h4 style={{ color: "var(--primary-color)", fontSize: "18px" }}>
+            {steps[currentStep - 1]?.title}
+          </h4>
+          <p style={{ color: "var(--secondary-color)" }}>
+            {steps[currentStep - 1]?.description}
+          </p>
+        </Col>
+      </Row>
+      {steps[currentStep - 1]?.content}
+    </StepModal>
   );
 };
 
+// Export
 export default SelectPackageModal;

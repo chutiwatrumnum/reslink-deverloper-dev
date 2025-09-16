@@ -8,6 +8,8 @@ export interface DeveloperNewsType {
     imageUrl?: string;
     startDate: string;
     endDate: string;
+    startTime?: string;
+    endTime?: string;
     active: boolean;
     isPublish: boolean;
     projects?: Array<{

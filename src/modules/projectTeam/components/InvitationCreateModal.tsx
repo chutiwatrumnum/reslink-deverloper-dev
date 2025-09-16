@@ -107,7 +107,7 @@ const InvitationCreateModal = ({
               rules={[
                 {
                   max: 120,
-                  message: "First name must be less than 120 characters",
+                  message: "Middle name must be less than 120 characters",
                 },
               ]}
             >
@@ -169,6 +169,12 @@ const InvitationCreateModal = ({
                 options={roleData}
                 fieldNames={{ label: "name", value: "id" }}
                 placeholder="Please select role"
+                showSearch
+                filterOption={(input, option) =>
+                  ((option as any)?.name ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
               />
             </Form.Item>
             <Form.Item
@@ -183,6 +189,12 @@ const InvitationCreateModal = ({
                 fieldNames={{ label: "name", value: "id" }}
                 placeholder="Please select project"
                 allowClear
+                showSearch
+                filterOption={(input, option) =>
+                  ((option as any)?.name ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
               />
             </Form.Item>
             <Form.Item

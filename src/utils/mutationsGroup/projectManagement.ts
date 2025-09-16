@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import SuccessModal from "../../components/common/SuccessModal";
 
 import axios from "axios";
 import { message } from "antd";
@@ -122,7 +123,8 @@ export const useEditProjectManagementMutation = () => {
     },
     onSuccess: (data) => {
       console.log("Edit Project Success: ", data);
-      message.success("Project edit successfully!");
+      SuccessModal("Success")
+      // message.success("Project edit successfully!");
       queryClient.invalidateQueries({ queryKey: ["projectManagement"] });
     },
     onError: (error: any) => {
@@ -152,7 +154,9 @@ export const useDeleteProjectManagementMutation = () => {
     },
     onSuccess: (data) => {
       console.log("Delete Project Success: ", data);
-      message.success("Project deleted successfully!");
+      SuccessModal("Success")
+
+      // message.success("Project deleted successfully!");
       queryClient.invalidateQueries({ queryKey: ["projectManagement"] });
     },
     onError: (error: any) => {

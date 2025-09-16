@@ -3,20 +3,25 @@ import axios from "axios";
 import {
   ProjectFromDataType,
   ProjectResponse,
-  PreviewFeatureById,
-  ProjectManagementParams
 } from "../../stores/interfaces/ProjectManage";
 
 // Get all projects
 const getProject = async ({
   queryKey,
-}: QueryFunctionContext<[string, boolean, number, number, string?]>) => {
-  const [_key, activated, curPage, perPage, search] = queryKey;
+}: QueryFunctionContext<[string, boolean, number, string?]>) => {
+  const [_key, active, curPage, search] = queryKey;
+  const statusId = 99
 
   const params = new URLSearchParams();
   params.append("curPage", curPage.toString());
-  params.append("perPage", perPage.toString());
-  params.append("activated", activated.toString());
+  params.append("perPage", "10");
+  if (active) {
+    params.append("status", "99");
+  } else {
+    params.append("active", "false");
+  }
+  
+
   if (search) params.append("search", search);
 
   const url = `/project/developer/dashboard?${params.toString()}`;
@@ -33,12 +38,12 @@ const getProject = async ({
 };
 
 export const useProjectManagementQuery = (
-  params: ProjectManagementParams
+  params: { active: boolean; curPage: number; search?: string }
 ) => {
-  const { activated, curPage, perPage, search } = params;
+  const { active, curPage, search } = params;
 
   return useQuery({
-    queryKey: ["projectManagement", activated, curPage, perPage, search],
+    queryKey: ["projectManagement", active, curPage, search],
     queryFn: getProject,
     enabled: !!params,
     retry: 2,
@@ -244,6 +249,33 @@ export const useFeatureByProjectIdQuery = (id?: string) => {
 };
 
 
+// Get preview Feature 
+const getPreviewFeatureByLicenseId = async ({
+  queryKey,
+}: QueryFunctionContext<[string, string]>): Promise<ProjectResponse> => {
+  const [_key, licenseId] = queryKey;
+
+  if (!licenseId) throw new Error("License ID is required");
+
+  const url = `/license/preview/${licenseId}/dashboard`;
+  const res = await axios.get(url);
+
+  if (res.data?.result) {
+    return res.data.result;
+  } else {
+    throw new Error("Project by id not found");
+  }
+};
+
+export const usePreviewFeatureByLicenseIdQuery = (id?: string) => {
+  return useQuery<ProjectResponse, Error>({
+    queryKey: ["previewFeature", id],
+    queryFn: getPreviewFeatureByLicenseId,
+    enabled: !!id,
+    staleTime: 30 * 1000,
+  });
+};
+
 // Get Feature and Project 
 const getFeaturesAndProjectById = async ({
   queryKey,
@@ -270,6 +302,7 @@ export const useFeaturesAndProjectByIdQuery = (id?: string) => {
     staleTime: 30 * 1000,
   });
 };
+
 
 
 

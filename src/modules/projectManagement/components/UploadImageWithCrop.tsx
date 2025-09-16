@@ -3,10 +3,14 @@ import { Upload, Typography, Button, message } from "antd";
 import type { GetProp, UploadProps } from "antd";
 import ImgCrop from "antd-img-crop";
 import { NoImageIcon } from "../../../assets/icons/Icons";
+import { UploadImageIcon } from "../../../assets/icons/Icons";
 import { whiteLabel } from "../../../configs/theme";
 import "../styles/uploadImageWithCrop.css";
 import { DeleteOutlined } from "@ant-design/icons";
 import { RcFile } from "antd/es/upload";
+
+// CSS
+import "../styles/uploadImageWithCrop.css";
 
 const { Text } = Typography;
 
@@ -22,6 +26,7 @@ interface UploadImageWithCropPropsType {
   disabled?: boolean;
   height?: number;
   ratio?: string; // ข้อความบอกสัดส่วน
+  width?: string;
 }
 
 const UploadImageWithCrop: React.FC<UploadImageWithCropPropsType> = ({
@@ -31,6 +36,7 @@ const UploadImageWithCrop: React.FC<UploadImageWithCropPropsType> = ({
   disabled = false,
   height = 180,
   ratio = "16:9 ratio (1280x720 px)",
+  width = "100%",
 }) => {
   const [imageUrl, setImageUrl] = useState<string>(value || "");
   const [zoom, setZoom] = useState();
@@ -79,22 +85,18 @@ const UploadImageWithCrop: React.FC<UploadImageWithCropPropsType> = ({
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        borderRadius: 8,
-        backgroundColor: "#fafafa",
+        backgroundColor: "#fff",
         cursor: disabled ? "not-allowed" : "pointer",
       }}
     >
       <div style={{ marginBottom: 8 }}>
-        <NoImageIcon
-          color={whiteLabel.grayColor}
-          className="noImageIconUpload"
-        />
+        <UploadImageIcon />
       </div>
       <Text style={{ color: whiteLabel.grayColor, marginBottom: 4 }}>
         Upload your photo
       </Text>
       <Text style={{ color: whiteLabel.grayColor, fontSize: "12px" }}>
-        *File size &lt;1MB, {ratio}, *JPGs/PNGs
+        *File size &lt;1MB, {ratio}, *JPGs
       </Text>
     </div>
   );
@@ -123,11 +125,12 @@ const UploadImageWithCrop: React.FC<UploadImageWithCropPropsType> = ({
           disabled={disabled}
           accept=".png,.jpg,.jpeg"
           style={{
-            width: "100%",
+            width,
             height: "80%",
-            padding: 12,
+            padding: "4px",
           }}
           showUploadList={false}
+          className="uploadImageForm"
         >
           {imageUrl ? (
             <img
@@ -136,6 +139,7 @@ const UploadImageWithCrop: React.FC<UploadImageWithCropPropsType> = ({
               style={{
                 height,
                 objectFit: "contain",
+                width: "85%",
               }}
             />
           ) : (

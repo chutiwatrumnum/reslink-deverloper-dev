@@ -56,7 +56,7 @@ const DevTeamListEditModal = ({
         const payload = {
           givenName: values.firstName,
           familyName: values.lastName,
-          middleName: values.middleName || "",
+          middleName: values.middleName || null,
           contact: values.contact,
           roleId: Number(values.roleId), // แปลงเป็น number
         };

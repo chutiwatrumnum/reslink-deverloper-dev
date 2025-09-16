@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { usePagination } from "../../../utils/hooks/usePagination";
 // Components
 import Header from "../../../components/templates/Header";
-import ConfirmModal from "../../../components/common/ConfirmModal";
 import {
   Row,
   Col,
@@ -18,7 +16,6 @@ import {
   Modal,
   Collapse,
   Empty,
-  Skeleton,
   Space,
   Spin,
 } from "antd";
@@ -26,7 +23,7 @@ import CreateProjectModal from "../components/modals/CreateProjectModal";
 import EditProjectModal from "../components/modals/EditProjectModal";
 import { callConfirmModal } from "../../../components/common/Modal";
 // Types
-import type { TabsProps, CollapseProps } from "antd";
+import type { TabsProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 // Data & APIs
 import type { ProjectManageType } from "../../../stores/interfaces/ProjectManage";
@@ -34,7 +31,6 @@ import type { ProjectManageType } from "../../../stores/interfaces/ProjectManage
 import {
   EditOutlined,
   InfoCircleOutlined,
-  DeleteOutlined,
   PictureOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -42,99 +38,36 @@ import {
   ExclamationCircleOutlined,
   ContainerOutlined,
   CheckCircleFilled,
+  WarningOutlined,
 } from "@ant-design/icons";
+import { InfoIcon, TrashIcon, EditIcon } from "../../../assets/icons/Icons";
 // APIs & Data
 import {
   useProjectManagementQuery,
-  useProjectByIdQuery,
   useFeatureByProjectIdQuery,
-  useFeaturesAndProjectByIdQuery,
 } from "../../../utils/queriesGroup/projectManagementQueries";
 import { useDeleteProjectManagementMutation } from "../../../utils/mutationsGroup/projectManagement";
 import "../styles/projectManagement.css";
 
-const ProjectManagement = () => {
-  const { perPage, pageSizeOptions } = usePagination({
-    initialPage: 1,
-    initialPerPage: 10,
-  });
+import dayjs from "dayjs";
 
-  const [isApproved, setIsApproved] = useState<boolean>(true);
-  const [approvedPage, setApprovedPage] = useState(1);
-  const [unapprovedPage, setUnapprovedPage] = useState(1);
+const ProjectManagement = () => {
+  const [curPage, setCurPage] = useState(1);
+  const [isApproved, setIsApproved] = useState(true);
   const [search, setSearch] = useState<string>("");
 
   const [selectedRecord, setSelectedRecord] =
     useState<ProjectManageType | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<
-    string | number | null
-  >(null);
 
-  // Query for approved (activated: true)
   const {
-    data: approvedProjectData,
-    isLoading: approvedProjectLoading,
-    refetch: refetchApprovedProject,
+    data: projectData,
+    isLoading: projectLoading,
+    refetch: refetchProject,
   } = useProjectManagementQuery({
-    activated: true,
-    curPage: approvedPage,
-    perPage,
+    active: isApproved,
+    curPage: curPage,
     search,
   });
-
-  // Query for unapproved (activated: false)
-  const {
-    data: unapprovedProjectData,
-    isLoading: unapprovedProjectLoading,
-    refetch: refetchUnapprovedProject,
-  } = useProjectManagementQuery({
-    activated: false,
-    curPage: unapprovedPage,
-    perPage,
-    search,
-  });
-
-  const currentProjectData = isApproved
-    ? approvedProjectData
-    : unapprovedProjectData;
-
-  const currentLoading = isApproved
-    ? approvedProjectLoading
-    : unapprovedProjectLoading;
-  const currentPage = isApproved ? approvedPage : unapprovedPage;
-
-  const currentDataSource = isApproved
-    ? currentProjectData?.rows?.filter((project) => {
-        const status = project?.status?.nameCode;
-        return status === "activated";
-      }) || []
-    : currentProjectData?.rows?.filter((project) => {
-        const status = project?.status?.nameCode;
-        return (
-          status === "draft_project" ||
-          status === "pending" ||
-          status === "waiting_payment"
-        );
-      }) || [];
-
-  const currentTotal = (() => {
-    const total = currentProjectData?.total ?? 0;
-    const currentPageSize = currentProjectData?.rows?.length ?? 0;
-    const filteredPageSize = currentDataSource.length;
-
-    if (currentPageSize > 0 && filteredPageSize / currentPageSize < 0.5) {
-      return filteredPageSize;
-    }
-    return total;
-  })();
-
-  const onPageChange = (page: number) => {
-    if (isApproved) {
-      setApprovedPage(page);
-    } else {
-      setUnapprovedPage(page);
-    }
-  };
 
   // Mutations
   const deleteMutation = useDeleteProjectManagementMutation();
@@ -144,14 +77,7 @@ const ProjectManagement = () => {
 
   const licenseData = featureByProjectId || [];
 
-  // Access the first license (most common case)
   const primaryLicense = licenseData[0];
-
-  // const dataById = projectByIdData || selectedInfo;
-  // const dataFeatureByProjectId = featuresByProjectId || selectedInfo;
-
-  // const projectData = featureAndProjectById?.project || selectedInfo;
-  // const licenseData = featureAndProjectById?.licenses || selectedInfo;
 
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -174,6 +100,7 @@ const ProjectManagement = () => {
   const { Search } = Input;
   const onSearch = (value: string) => {
     setSearch(value);
+    setCurPage(1);
   };
 
   // Tab configuration
@@ -183,11 +110,11 @@ const ProjectManagement = () => {
   ];
 
   const onTabsChange = (key: string) => {
-    setIsApproved(key === "approved");
+    setCurPage(1);
     if (key === "approved") {
-      setApprovedPage(1);
+      setIsApproved(true);
     } else {
-      setUnapprovedPage(1);
+      setIsApproved(false);
     }
   };
   // 🪧➕ Request new project Modal
@@ -229,8 +156,7 @@ const ProjectManagement = () => {
 
   const onRefresh = () => {
     setRefresh(!refresh);
-    refetchApprovedProject();
-    refetchUnapprovedProject();
+    refetchProject();
   };
 
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -287,8 +213,7 @@ const ProjectManagement = () => {
             { id: deleteId! },
             {
               onSuccess: () => {
-                refetchApprovedProject();
-                refetchUnapprovedProject();
+                refetchProject();
               },
             }
           );
@@ -301,7 +226,7 @@ const ProjectManagement = () => {
   };
 
   // Table
-  const columns: ColumnsType<ProjectManageType> = [
+  const approvedColumns: ColumnsType<ProjectManageType> = [
     {
       title: "Logo project",
       key: "logo",
@@ -313,8 +238,8 @@ const ProjectManagement = () => {
             <Flex
               style={{
                 backgroundColor: "#f5f5f5",
-                borderRadius: 8,
-                width: 180,
+                borderRadius: 16,
+                width: 140,
                 height: 120,
                 margin: "auto",
               }}
@@ -326,10 +251,10 @@ const ProjectManagement = () => {
           ) : (
             <Image
               src={record?.logo}
-              height={120}
+              width={140}
+              height={"100%"}
               style={{
                 objectFit: "contain",
-                borderRadius: 8,
               }}
             />
           )}
@@ -347,7 +272,7 @@ const ProjectManagement = () => {
             <Flex
               style={{
                 backgroundColor: "#f5f5f5",
-                borderRadius: 8,
+                borderRadius: 16,
                 width: 180,
                 height: 120,
                 margin: "auto",
@@ -363,7 +288,6 @@ const ProjectManagement = () => {
               height={120}
               style={{
                 objectFit: "contain",
-                borderRadius: 8,
               }}
             />
           )}
@@ -413,6 +337,11 @@ const ProjectManagement = () => {
           backgroundColor = "#FFE3E3";
           text = "Inactive";
           icon = <CloseCircleOutlined />;
+        } else if (status === "expired") {
+          color = "#FFE3E3";
+          backgroundColor = "#D73232";
+          text = "Expired";
+          icon = <WarningOutlined />;
         }
         return (
           <Tag
@@ -422,6 +351,7 @@ const ProjectManagement = () => {
               backgroundColor,
               borderColor: color,
               margin: 0,
+              borderRadius: 6,
             }}
           >
             {text}
@@ -459,7 +389,11 @@ const ProjectManagement = () => {
             size="small"
             type="link"
             onClick={() => onViewMap(record?.lat, record?.long)}
-            style={{ border: `1px solid var(--secondary-color)`, fontSize: 12 }}
+            style={{
+              border: `1px solid var(--secondary-color)`,
+              fontSize: 12,
+            }}
+            className="buttonMap"
           >
             Google map
           </Button>
@@ -482,27 +416,13 @@ const ProjectManagement = () => {
                 backgroundColor: "#E6F9E6",
                 borderColor: "#38BE43",
                 margin: 0,
+                borderRadius: 8,
               }}
             >
               Success
             </Tag>
           );
         }
-        // if (active === false) {
-        //   return (
-        //     <Tag
-        //       style={{
-        //         color: "#D73232",
-        //         backgroundColor: "#FFE3E3",
-        //         borderColor: "#D73232",
-        //         margin: 0,
-        //       }}
-        //       // icon={<CloseCircleOutlined />}
-        //     >
-        //       Inactive
-        //     </Tag>
-        //   );
-        // }
         switch (status) {
           case "Draft project":
           case "Waiting for payment":
@@ -512,6 +432,7 @@ const ProjectManagement = () => {
                 type="primary"
                 onClick={() => onContinue(record)}
                 style={{ fontSize: 12 }}
+                className="buttonContinue"
               >
                 Continue
               </Button>
@@ -523,22 +444,36 @@ const ProjectManagement = () => {
                 type="primary"
                 disabled
                 style={{ fontSize: 12 }}
+                className="buttonContinue"
               >
                 Continue
               </Button>
             );
-          case "Expired":
+          case "expired":
             return (
               <Tag
                 style={{
-                  color: "#D73232",
-                  backgroundColor: "#FFE3E3",
-                  borderColor: "#D73232",
+                  color: "#FFE3E3",
+                  backgroundColor: "#D73232",
+                  borderColor: "#FFE3E3",
                   margin: 0,
+                  borderRadius: 8,
                 }}
               >
                 Expired
               </Tag>
+            );
+          case "inactive":
+            return (
+              <Button
+                size="small"
+                type="primary"
+                disabled
+                style={{ fontSize: 12 }}
+                className="buttonContinue"
+              >
+                Continue
+              </Button>
             );
           default:
             return null;
@@ -558,8 +493,8 @@ const ProjectManagement = () => {
                 onClick={() => onInfo(record)}
                 type="text"
                 icon={
-                  <InfoCircleOutlined
-                    style={{ fontSize: 18, color: "#403d38" }}
+                  <InfoIcon
+                    style={{ fontSize: 18, color: "var(--primary-color)" }}
                   />
                 }
               />
@@ -569,7 +504,9 @@ const ProjectManagement = () => {
                 type="text"
                 onClick={() => onEditProject(record)}
                 icon={
-                  <EditOutlined style={{ fontSize: 18, color: "#403d38" }} />
+                  <EditIcon
+                    style={{ fontSize: 18, color: "var(--primary-color)" }}
+                  />
                 }
               />
             </Col>
@@ -578,7 +515,310 @@ const ProjectManagement = () => {
                 type="text"
                 onClick={() => showDeleteUnverifiedConfirm(record)}
                 icon={
-                  <DeleteOutlined style={{ fontSize: 18, color: "#403d38" }} />
+                  <TrashIcon
+                    style={{ fontSize: 18, color: "var(--primary-color)" }}
+                  />
+                }
+              />
+            </Col>
+          </Row>
+        );
+      },
+    },
+  ];
+
+  const unapprovedColumns: ColumnsType<ProjectManageType> = [
+    {
+      title: "Logo project",
+      key: "logo",
+      dataIndex: "logo",
+      align: "center",
+      render: (_, record) => (
+        <>
+          {!record?.logo ? (
+            <Flex
+              style={{
+                backgroundColor: "#f5f5f5",
+                borderRadius: 16,
+                width: 140,
+                height: 120,
+                margin: "auto",
+              }}
+              justify="center"
+              align="center"
+            >
+              <PictureOutlined style={{ fontSize: 36, color: "#bfbfbf" }} />
+            </Flex>
+          ) : (
+            <Image
+              src={record?.logo}
+              width={140}
+              height={"100%"}
+              style={{
+                objectFit: "contain",
+              }}
+            />
+          )}
+        </>
+      ),
+    },
+    {
+      title: "Project image",
+      key: "image",
+      dataIndex: "image",
+      align: "center",
+      render: (_, record) => (
+        <>
+          {!record?.image ? (
+            <Flex
+              style={{
+                backgroundColor: "#f5f5f5",
+                borderRadius: 16,
+                width: 180,
+                height: 120,
+                margin: "auto",
+              }}
+              justify="center"
+              align="center"
+            >
+              <PictureOutlined style={{ fontSize: 36, color: "#bfbfbf" }} />
+            </Flex>
+          ) : (
+            <Image
+              src={record?.image}
+              height={120}
+              style={{
+                objectFit: "contain",
+              }}
+            />
+          )}
+        </>
+      ),
+    },
+    {
+      title: "Project name",
+      align: "center",
+      render: (_, record) => {
+        return <div>{record.name || "-"}</div>;
+      },
+    },
+    {
+      title: "Status",
+      key: "statusDisplay",
+      dataIndex: "statusDisplay",
+      align: "center",
+      render: (_, record) => {
+        let color = "";
+        let backgroundColor = "";
+        let text = "";
+        let icon = <CheckCircleOutlined />;
+        const status = record?.statusDisplay;
+        if (status === "Activated") {
+          color = "#38BE43";
+          backgroundColor = "#E6F9E6";
+          text = "Activated";
+          icon = <CheckCircleOutlined />;
+        } else if (status === "Draft project") {
+          color = "#34495d";
+          backgroundColor = "#f6f6f6";
+          text = "Draft project";
+          icon = <ContainerOutlined />;
+        } else if (status === "Pending activate") {
+          color = "#ECA013";
+          backgroundColor = "#FFF7DA";
+          text = "Pending";
+          icon = <ExclamationCircleOutlined />;
+        } else if (status === "Waiting for payment") {
+          color = "#d4380d";
+          backgroundColor = "#fff2e8";
+          text = "Waiting for payment";
+          icon = <ClockCircleOutlined />;
+        } else if (status === "inactive") {
+          color = "#D73232";
+          backgroundColor = "#FFE3E3";
+          text = "Inactive";
+          icon = <CloseCircleOutlined />;
+        } else if (status === "expired") {
+          color = "#FFE3E3";
+          backgroundColor = "#D73232";
+          text = "Expired";
+          icon = <WarningOutlined />;
+        }
+        return (
+          <Tag
+            icon={icon}
+            style={{
+              color,
+              backgroundColor,
+              borderColor: color,
+              margin: 0,
+              borderRadius: 6,
+            }}
+          >
+            {text}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Created by",
+      key: "createdBy",
+      dataIndex: "createdBy",
+      align: "center",
+      render: (_, record) => {
+        const fullName = `${record?.createdBy?.givenName} ${record?.createdBy?.familyName}`;
+        return (
+          <Flex vertical={true}>
+            <p style={{ margin: 0, textTransform: "capitalize" }}>
+              <span>{fullName || "-"}</span>
+            </p>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {record?.createdBy?.role?.name || "-"}
+            </Text>
+          </Flex>
+        );
+      },
+    },
+    {
+      title: "Location",
+      align: "center",
+      render: (_, record) => {
+        if (!record?.lat || !record?.long) return "-";
+
+        return (
+          <Button
+            size="small"
+            type="link"
+            onClick={() => onViewMap(record?.lat, record?.long)}
+            style={{
+              border: `1px solid var(--secondary-color)`,
+              fontSize: 12,
+            }}
+            className="buttonMap"
+          >
+            Google map
+          </Button>
+        );
+      },
+    },
+    {
+      title: "Package",
+      key: "active",
+      dataIndex: "active",
+      align: "center",
+      render: (_, record) => {
+        const active = record?.active;
+        const status = record?.statusDisplay;
+        if (active === true) {
+          return (
+            <Tag
+              style={{
+                color: "#38BE43",
+                backgroundColor: "#E6F9E6",
+                borderColor: "#38BE43",
+                margin: 0,
+                borderRadius: 8,
+              }}
+            >
+              Success
+            </Tag>
+          );
+        }
+        switch (status) {
+          case "Draft project":
+          case "Waiting for payment":
+            return (
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => onContinue(record)}
+                style={{ fontSize: 12 }}
+                className="buttonContinue"
+              >
+                Continue
+              </Button>
+            );
+          case "Pending activate":
+            return (
+              <Button
+                size="small"
+                type="primary"
+                disabled
+                style={{ fontSize: 12 }}
+                className="buttonContinue"
+              >
+                Continue
+              </Button>
+            );
+          case "expired":
+            return (
+              <Tag
+                style={{
+                  color: "#FFE3E3",
+                  backgroundColor: "#D73232",
+                  borderColor: "#FFE3E3",
+                  margin: 0,
+                  borderRadius: 8,
+                }}
+              >
+                Expired
+              </Tag>
+            );
+          case "inactive":
+            return (
+              <Button
+                size="small"
+                type="primary"
+                disabled
+                style={{ fontSize: 12 }}
+                className="buttonContinue"
+              >
+                Continue
+              </Button>
+            );
+          default:
+            return null;
+        }
+      },
+    },
+    {
+      title: "Action",
+      align: "center",
+      fixed: "right",
+      width: 130,
+      render: (_, record) => {
+        return (
+          <Row justify={"center"}>
+            <Col>
+              <Button
+                onClick={() => onInfo(record)}
+                type="text"
+                icon={
+                  <InfoIcon
+                    style={{ fontSize: 18, color: "var(--primary-color)" }}
+                  />
+                }
+              />
+            </Col>
+            <Col>
+              <Button
+                type="text"
+                onClick={() => onEditProject(record)}
+                icon={
+                  <EditIcon
+                    style={{ fontSize: 18, color: "var(--primary-color)" }}
+                  />
+                }
+              />
+            </Col>
+            <Col>
+              <Button
+                type="text"
+                onClick={() => showDeleteUnverifiedConfirm(record)}
+                icon={
+                  <TrashIcon
+                    style={{ fontSize: 18, color: "var(--primary-color)" }}
+                  />
                 }
               />
             </Col>
@@ -592,46 +832,46 @@ const ProjectManagement = () => {
     const statusMap: any = {
       Activated: {
         color: "#38BE43",
-        backgroundColor: "#E6F9E6",
         text: "Activated",
       },
-      "Draft Project": {
+      "Draft project": {
         color: "#34495d",
-        backgroundColor: "#FFF7DA",
         text: "Draft Project",
       },
-      "Pending activated": {
+      "Pending activate": {
         color: "#ECA013",
-        backgroundColor: "#FFF7DA",
         text: "Pending",
       },
       "Waiting for payment": {
         color: "#d4380d",
-        backgroundColor: "#fff2e8",
         text: "Waiting for payment",
       },
       inactive: {
         color: "#D73232",
-        backgroundColor: "#FFE3E3",
         text: "Inactive",
+      },
+      expired: {
+        color: "#D73232",
+        text: "Expired",
       },
     };
 
     return (
       statusMap[status] || {
         color: "#666",
-        backgroundColor: "#f0f0f0",
         text: status,
       }
     );
   };
   const statusStyle = getStatusStyle(selectedRecord?.statusDisplay);
+
   return (
     <>
       <Header title="Project management" />
       <Row style={{ marginTop: 24 }}>
         <Col span={6}>
           <Search
+            size="large"
             placeholder="Search by project name"
             allowClear
             onSearch={onSearch}
@@ -641,7 +881,13 @@ const ProjectManagement = () => {
         </Col>
         <Col span={12}></Col>
         <Col span={6}>
-          <Button type="primary" onClick={onCreate} style={{ width: "100%" }}>
+          <Button
+            type="primary"
+            onClick={onCreate}
+            style={{ width: "100%" }}
+            className="createProjectButton"
+            size="large"
+          >
             Request new project
           </Button>
         </Col>
@@ -656,17 +902,18 @@ const ProjectManagement = () => {
       <Row>
         <Col span={24}>
           <Table
-            columns={columns}
-            loading={currentLoading}
-            dataSource={currentDataSource}
+            columns={isApproved ? approvedColumns : unapprovedColumns}
+            loading={projectLoading}
+            dataSource={projectData?.rows || []}
             rowKey="id"
             pagination={{
-              current: currentPage,
-              pageSize: perPage,
-              total: currentTotal,
-              pageSizeOptions,
+              current: curPage,
+              pageSize: 10,
+              total: projectData?.total || 0,
+              onChange: (page) => setCurPage(page),
               showSizeChanger: false,
-              onChange: onPageChange,
+              // showTotal: (total, range) =>
+              //   `${range[0]}-${range[1]} of ${total} items`,
             }}
             scroll={{ x: "max-content" }}
           />
@@ -689,6 +936,7 @@ const ProjectManagement = () => {
         onOk={onEditProjectOk}
         onRefresh={onRefresh}
       />
+      {/* Modal Info */}
       <Modal
         width={"85%"}
         open={isInfoProjectModalOpen}
@@ -698,15 +946,15 @@ const ProjectManagement = () => {
         centered={true}
         style={{
           maxHeight: "90vh",
-          overflowY: "auto",
-          overflowX: "hidden",
         }}
+        className="infoModal"
       >
         {selectedRecord && (
           <div
             style={{
               maxHeight: "75vh",
               overflowY: "auto",
+              overflowX: "hidden",
             }}
           >
             <Row gutter={24} style={{ marginTop: 24 }}>
@@ -718,7 +966,7 @@ const ProjectManagement = () => {
                     <Flex
                       style={{
                         backgroundColor: "#f5f5f5",
-                        borderRadius: 8,
+                        borderRadius: 16,
                         width: "100%",
                         height: 140,
                       }}
@@ -736,7 +984,7 @@ const ProjectManagement = () => {
                         src={selectedRecord?.image}
                         style={{
                           objectFit: "contain",
-                          borderRadius: 8,
+                          borderRadius: 16,
                           border: "1px solid #C6C8C9",
                         }}
                       />
@@ -749,7 +997,7 @@ const ProjectManagement = () => {
                     <Flex
                       style={{
                         backgroundColor: "#f5f5f5",
-                        borderRadius: 8,
+                        borderRadius: 16,
                         width: "100%",
                         height: 140,
                       }}
@@ -767,7 +1015,7 @@ const ProjectManagement = () => {
                         src={selectedRecord?.logo}
                         style={{
                           objectFit: "contain",
-                          borderRadius: 8,
+                          borderRadius: 16,
                           border: "1px solid #C6C8C9",
                         }}
                       />
@@ -785,7 +1033,7 @@ const ProjectManagement = () => {
                 <Row
                   style={{
                     border: "1px solid #C6C8C9",
-                    borderRadius: 8,
+                    borderRadius: 16,
                     padding: 12,
                   }}
                 >
@@ -828,7 +1076,7 @@ const ProjectManagement = () => {
                           <Text strong>Map</Text>
                           {selectedRecord?.lat && selectedRecord?.long && (
                             <Button
-                              size="small"
+                              size="middle"
                               type="link"
                               onClick={() =>
                                 onViewMap(
@@ -839,10 +1087,11 @@ const ProjectManagement = () => {
                               style={{
                                 border: `1px solid var(--secondary-color)`,
                                 fontSize: 12,
-                                padding: "2px 8px",
+                                padding: "4px 8px",
                               }}
+                              className="buttonMapInfo"
                             >
-                              View Map
+                              Google map
                             </Button>
                           )}
                         </Flex>
@@ -864,18 +1113,9 @@ const ProjectManagement = () => {
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
                           <Text strong>Status</Text>
-                          <Tag
-                            style={{
-                              color: statusStyle.color,
-                              backgroundColor: statusStyle.backgroundColor,
-                              borderColor: statusStyle.color,
-                              textAlign: "center",
-                              margin: 0,
-                              padding: 2,
-                            }}
-                          >
+                          <Text style={{ color: statusStyle.color }}>
                             {statusStyle.text}
-                          </Tag>
+                          </Text>
                         </Flex>
                       </Col>
                     </Row>
@@ -940,7 +1180,7 @@ const ProjectManagement = () => {
                       padding: 48,
                       width: "100%",
                       border: "1px solid #c7c9c9",
-                      borderRadius: 8,
+                      borderRadius: 16,
                     }}
                     justify="center"
                     align="center"
@@ -952,6 +1192,7 @@ const ProjectManagement = () => {
                   <Space direction="vertical" style={{ width: "100%" }}>
                     {/* Standard Features */}
                     <Collapse
+                      style={{ borderRadius: 10 }}
                       collapsible="header"
                       defaultActiveKey={["1"]}
                       items={[
@@ -965,7 +1206,7 @@ const ProjectManagement = () => {
                               {primaryLicense?.features?.standard?.features?.map(
                                 (feature, index) => (
                                   <Col span={8} key={index}>
-                                    <Flex gap={8} align="center">
+                                    <Flex gap={8} align="start">
                                       <CheckCircleFilled
                                         style={{
                                           color: "var(--success-color)",
@@ -988,22 +1229,37 @@ const ProjectManagement = () => {
                       ]}
                     />
 
-                    {/* Optional Features */}
                     {primaryLicense?.features?.optional?.features &&
                       primaryLicense.features.optional.features.length > 0 && (
                         <>
-                          {primaryLicense.features.optional.features.map(
-                            (feature, index) => (
-                              <Collapse
-                                key={index}
-                                items={[
-                                  {
-                                    key: index.toString(),
-                                    label: `Optional (License period: ${feature.startDate} - ${feature.endDate})`,
-                                    children: (
-                                      <Row gutter={[8, 8]}>
-                                        <Col span={24}>
-                                          <Flex gap={8} align="center">
+                          {Object.entries(
+                            primaryLicense.features.optional.features.reduce(
+                              (i, feature) => {
+                                const period = `${primaryLicense?.features?.optional?.period}`;
+                                if (!i[period]) {
+                                  i[period] = [];
+                                }
+                                i[period].push(feature);
+                                return i;
+                              },
+                              {}
+                            )
+                          ).map(([period, features], periodIndex) => (
+                            <Collapse
+                              style={{ borderRadius: 10 }}
+                              key={`optional-${periodIndex}`}
+                              items={[
+                                {
+                                  key: `optional-period-${periodIndex}`,
+                                  label: `Optional (License period: ${period})`,
+                                  children: (
+                                    <Row gutter={[8, 8]}>
+                                      {features.map((feature, featureIndex) => (
+                                        <Col
+                                          span={8}
+                                          key={`feature-${periodIndex}-${featureIndex}`}
+                                        >
+                                          <Flex gap={8} align="start">
                                             <CheckCircleFilled
                                               style={{
                                                 color: "var(--success-color)",
@@ -1019,13 +1275,13 @@ const ProjectManagement = () => {
                                             </Text>
                                           </Flex>
                                         </Col>
-                                      </Row>
-                                    ),
-                                  },
-                                ]}
-                              />
-                            )
-                          )}
+                                      ))}
+                                    </Row>
+                                  ),
+                                },
+                              ]}
+                            />
+                          ))}
                         </>
                       )}
                   </Space>

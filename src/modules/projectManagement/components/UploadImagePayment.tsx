@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
-
 import { Upload, Typography, message, Flex } from "antd";
 import { whiteLabel } from "../../../configs/theme";
-
-import type { RcFile, UploadFile, UploadProps } from "antd/es/upload/interface";
-import type { UploadChangeParam } from "antd/es/upload";
+import type { RcFile, UploadProps } from "antd/es/upload/interface";
 import { InboxOutlined } from "@ant-design/icons";
-import Column from "antd/es/table/Column";
+
 const { Text } = Typography;
 
 interface UploadImageGroupType {

@@ -1,8 +1,63 @@
-.saveButton {
-    width: 200px  !important
-}
 
 .ant-collapse-header-text {
     font-size: 13px !important;
     font-weight: 500 !important;
+}
+
+/* Create project button */
+.ant-btn.createProjectButton {
+    border-radius: 16px !important;
+}
+
+.searchBox .ant-input-affix-wrapper {
+    border-top-left-radius: 16px !important;
+    border-bottom-left-radius: 16px !important;
+}
+
+.searchBox .ant-btn.ant-input-search-button {
+    border-radius: 0 !important;
+    border-bottom-right-radius: 16px !important;
+    border-top-right-radius: 16px !important;
+}
+
+/* Tabs */
+/* active */
+.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: var(--primary-color) !important;
+    font-weight: 600;
+}
+/* No active */
+.ant-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+    color: var(--secondary-color) !important;
+}
+.ant-tabs .ant-tabs-ink-bar {
+  background-color: var(--primary-color) !important;
+}
+
+/* button map [Table] */
+.ant-btn.buttonMap {
+    border-radius: 8px !important;
+}
+
+/* button continue [Table] */
+.ant-btn.buttonContinue {
+    border-radius: 8px !important;
+
+}
+
+
+
+/* Confirm & cancel button modal */
+/* ant modal */
+.ant-modal-content {
+   border-radius: 8px !important
+}
+
+/* Info modal */
+.infoModal .ant-modal-content.ant-modal-content {
+   border-radius: 16px !important
+}
+
+.ant-btn.buttonMapInfo {
+    border-radius: 6px !important;
 }
