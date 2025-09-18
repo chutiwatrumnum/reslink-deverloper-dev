@@ -2,7 +2,7 @@ import axios from "axios";
 import { encryptStorage } from "../utils/encryptStorage";
 import { API_URL } from "./configs";
 
-console.log(API_URL, 'API_URL')
+// console.log(API_URL, 'API_URL')
 axios.defaults.baseURL = API_URL;
 axios.defaults.headers.post["Content-Type"] = "application/json";
 

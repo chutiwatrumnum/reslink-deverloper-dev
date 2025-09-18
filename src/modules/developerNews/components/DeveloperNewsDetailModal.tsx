@@ -1,5 +1,5 @@
 // src/modules/developerNews/components/DeveloperNewsDetailModal.tsx
-import { Modal, Row, Col, Image, Tag } from "antd";
+import { Modal, Row, Col, Image, Tag, Space } from "antd";
 import dayjs from "dayjs";
 import type { DeveloperNewsType } from "../../../stores/interfaces/DeveloperNews";
 
@@ -14,30 +14,34 @@ const DeveloperNewsDetailModal = ({
   onClose,
   newsData,
 }: DeveloperNewsDetailModalProps) => {
-  // Get status tag
-  const getStatusTag = (record: DeveloperNewsType) => {
-    const now = dayjs();
-    const startDate = dayjs(record.startDate);
-    const endDate = dayjs(record.endDate);
+  // Get status tag with time validation
+ const getStatusTag = (record: DeveloperNewsType) => {
+     const now = dayjs();
+     const startDateTime = record.startTime
+       ? dayjs(`${record.startDate} ${record.startTime}`, "YYYY-MM-DD HH:mm")
+       : dayjs(record.startDate);
 
-    if (!record.active || !record.isPublish) {
-      return <Tag color="red">Inactive</Tag>;
-    }
+     const endDateTime = record.endTime
+       ? dayjs(`${record.endDate} ${record.endTime}`, "YYYY-MM-DD HH:mm")
+       : dayjs(record.endDate).endOf("day"); // ถ้าไม่มี endTime ให้เป็น 23:59:59
 
-    if (now.isBefore(startDate)) {
-      return <Tag color="blue">Scheduled</Tag>;
-    }
+     if (!record.active || !record.isPublish) {
+       return <Tag color="red">Inactive</Tag>;
+     }
 
-    if (now.isAfter(endDate)) {
-      return <Tag color="gray">Expired</Tag>;
-    }
+     if (now.isBefore(startDateTime)) {
+       return <Tag color="blue">Scheduled</Tag>;
+     }
 
-    return <Tag color="green">Activated</Tag>;
-  };
+     if (now.isAfter(endDateTime)) {
+       return <Tag color="gray">Expired</Tag>;
+     }
+
+     return <Tag color="green">Activated</Tag>;
+   };
 
   // Get creator name from API data
   const getCreatorName = (record: DeveloperNewsType) => {
-    // ใช้ createBy จาก API ใหม่
     if (record.createBy) {
       const fullName = `${record.createBy.givenName || ""} ${
         record.createBy.familyName || ""
@@ -45,7 +49,6 @@ const DeveloperNewsDetailModal = ({
       return fullName || "-";
     }
 
-    // Fallback ไปใช้ createdBy format เดิม
     if (typeof record.createdBy === "object" && record.createdBy) {
       const fullName = `${record.createdBy.givenName || ""} ${
         record.createdBy.familyName || ""
@@ -60,27 +63,49 @@ const DeveloperNewsDetailModal = ({
     return "-";
   };
 
-  // Get project names from API data
-  const getProjectNames = (record: DeveloperNewsType) => {
+  // Get project tags (แทนที่จะเป็น text ยาวๆ)
+  const getProjectTags = (record: DeveloperNewsType) => {
+    let projects: Array<{ id: string; name: string }> = [];
+
     // ใช้ newsToProjects จาก API ใหม่
     if (record.newsToProjects && record.newsToProjects.length > 0) {
-      const projectNames = record.newsToProjects
-        .map((ntp) => ntp.project?.name || ntp.projectId)
-        .filter((name) => name && name.trim()) // กรองชื่อที่ว่างออก
-        .join(", ");
-      return projectNames || "-";
+      projects = record.newsToProjects
+        .map((ntp) => ({
+          id: ntp.projectId,
+          name: ntp.project?.name || ntp.projectId,
+        }))
+        .filter((p) => p.name && p.name.trim());
     }
-
     // Fallback ไปใช้ projects format เดิม
-    if (record.projects && record.projects.length > 0) {
-      const projectNames = record.projects
-        .map((p) => p.projectName || p.projectId)
-        .filter((name) => name && name.trim()) // กรองชื่อที่ว่างออก
-        .join(", ");
-      return projectNames || "-";
+    else if (record.projects && record.projects.length > 0) {
+      projects = record.projects
+        .map((p) => ({
+          id: p.projectId,
+          name: p.projectName || p.projectId,
+        }))
+        .filter((p) => p.name && p.name.trim());
     }
 
-    return "-";
+    if (projects.length === 0) {
+      return <Tag color="default">No projects</Tag>;
+    }
+
+    return (
+      <Space wrap size="small">
+        {projects.map((project, index) => (
+          <Tag
+            key={`${project.id}-${index}`}
+            color="blue"
+            style={{
+              marginBottom: 4,
+              borderRadius: 4,
+              fontSize: 12,
+            }}>
+            {project.name}
+          </Tag>
+        ))}
+      </Space>
+    );
   };
 
   const handleClose = () => {
@@ -188,7 +213,7 @@ const DeveloperNewsDetailModal = ({
               </p>
             </div>
 
-            {/* Target project */}
+            {/* Target project - ปรับปรุงเป็น Tags */}
             <div style={{ marginBottom: 24 }}>
               <h4
                 style={{
@@ -197,16 +222,9 @@ const DeveloperNewsDetailModal = ({
                   color: "#1f2937",
                   marginBottom: 8,
                 }}>
-                Target project
+                Target Projects
               </h4>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: "#374151",
-                  margin: 0,
-                }}>
-                {getProjectNames(newsData)}
-              </p>
+              <div style={{ minHeight: 32 }}>{getProjectTags(newsData)}</div>
             </div>
 
             {/* Announcement body */}
@@ -226,8 +244,13 @@ const DeveloperNewsDetailModal = ({
                   color: "#374151",
                   lineHeight: 1.6,
                   whiteSpace: "pre-wrap",
+                  minHeight: 40,
+                  padding: 12,
+                  backgroundColor: "#f9fafb",
+                  borderRadius: 6,
+                  border: "1px solid #e5e7eb",
                 }}>
-                {newsData.description || "-"}
+                {newsData.description || "No description provided"}
               </div>
             </div>
 
@@ -251,6 +274,7 @@ const DeveloperNewsDetailModal = ({
                     fontSize: 14,
                     color: "#3b82f6",
                     textDecoration: "none",
+                    wordBreak: "break-all",
                   }}>
                   {newsData.url}
                 </a>
@@ -258,9 +282,9 @@ const DeveloperNewsDetailModal = ({
             )}
 
             {/* Bottom row with dates and status */}
-            <Row gutter={16}>
+            <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={12}>
-                <div style={{ marginBottom: 16 }}>
+                <div>
                   <h4
                     style={{
                       fontSize: 14,
@@ -284,7 +308,7 @@ const DeveloperNewsDetailModal = ({
               </Col>
 
               <Col span={12}>
-                <div style={{ marginBottom: 16 }}>
+                <div>
                   <h4
                     style={{
                       fontSize: 14,
@@ -306,9 +330,9 @@ const DeveloperNewsDetailModal = ({
               </Col>
             </Row>
 
-            <Row gutter={16}>
+            <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={12}>
-                <div style={{ marginBottom: 16 }}>
+                <div>
                   <h4
                     style={{
                       fontSize: 14,
@@ -316,7 +340,7 @@ const DeveloperNewsDetailModal = ({
                       color: "#1f2937",
                       marginBottom: 4,
                     }}>
-                    Start date/Time
+                    Start date
                   </h4>
                   <p
                     style={{
@@ -332,7 +356,7 @@ const DeveloperNewsDetailModal = ({
               </Col>
 
               <Col span={12}>
-                <div style={{ marginBottom: 16 }}>
+                <div>
                   <h4
                     style={{
                       fontSize: 14,
@@ -340,7 +364,7 @@ const DeveloperNewsDetailModal = ({
                       color: "#1f2937",
                       marginBottom: 4,
                     }}>
-                    End date/time
+                    End date
                   </h4>
                   <p
                     style={{

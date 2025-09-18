@@ -17,25 +17,30 @@ const DeveloperNewsInfoModal = ({
   if (!newsData) return null;
 
   // Get status tag
-  const getStatusTag = (record: DeveloperNewsType) => {
-    const now = dayjs();
-    const startDate = dayjs(record.startDate);
-    const endDate = dayjs(record.endDate);
+   const getStatusTag = (record: DeveloperNewsType) => {
+     const now = dayjs();
+     const startDateTime = record.startTime
+       ? dayjs(`${record.startDate} ${record.startTime}`, "YYYY-MM-DD HH:mm")
+       : dayjs(record.startDate);
 
-    if (!record.active || !record.isPublish) {
-      return <Tag color="red">Inactive</Tag>;
-    }
+     const endDateTime = record.endTime
+       ? dayjs(`${record.endDate} ${record.endTime}`, "YYYY-MM-DD HH:mm")
+       : dayjs(record.endDate).endOf("day"); // ถ้าไม่มี endTime ให้เป็น 23:59:59
 
-    if (now.isBefore(startDate)) {
-      return <Tag color="blue">Scheduled</Tag>;
-    }
+     if (!record.active || !record.isPublish) {
+       return <Tag color="red">Inactive</Tag>;
+     }
 
-    if (now.isAfter(endDate)) {
-      return <Tag color="gray">Expired</Tag>;
-    }
+     if (now.isBefore(startDateTime)) {
+       return <Tag color="blue">Scheduled</Tag>;
+     }
 
-    return <Tag color="green">Published</Tag>;
-  };
+     if (now.isAfter(endDateTime)) {
+       return <Tag color="gray">Expired</Tag>;
+     }
+
+     return <Tag color="green">Activated</Tag>;
+   };
 
   return (
     <Modal

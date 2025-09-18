@@ -48,7 +48,6 @@ export default function DeveloperNewsEditModal({
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
 
-  // Use mutation
   const updateMutation = useUpdateDeveloperNewsMutation();
   const isSubmitting = updateMutation.isPending;
 
@@ -56,9 +55,6 @@ export default function DeveloperNewsEditModal({
 
   useEffect(() => {
     if (!selectedRecord || !isEditModalOpen) return;
-
-    console.log("🔄 Setting form values for edit modal...");
-    console.log("📋 Selected Record:", selectedRecord);
 
     // Parse dates และ times
     const startDate = selectedRecord.startDate
@@ -68,55 +64,54 @@ export default function DeveloperNewsEditModal({
       ? dayjs(selectedRecord.endDate)
       : null;
 
-    // Extract time จาก datetime
-    const startTime = selectedRecord.startDate
-      ? dayjs(selectedRecord.startDate)
-      : null;
-    const endTime = selectedRecord.endDate
-      ? dayjs(selectedRecord.endDate)
-      : null;
+    // แก้ไข: ตรวจสอบว่า startTime และ endTime มีค่าแยกหรือไม่
+    let startTime = null;
+    let endTime = null;
+
+    // ถ้ามี startTime/endTime แยกใน record
+    if (selectedRecord.startTime) {
+      startTime = dayjs(selectedRecord.startTime, "HH:mm");
+    } else if (selectedRecord.startDate) {
+      const startDateTime = dayjs(selectedRecord.startDate);
+      if (startDateTime.hour() !== 0 || startDateTime.minute() !== 0) {
+        startTime = startDateTime;
+      }
+    }
+
+    if (selectedRecord.endTime) {
+      endTime = dayjs(selectedRecord.endTime, "HH:mm");
+    } else if (selectedRecord.endDate) {
+      const endDateTime = dayjs(selectedRecord.endDate);
+      if (
+        !(endDateTime.hour() === 0 && endDateTime.minute() === 0) &&
+        !(endDateTime.hour() === 23 && endDateTime.minute() === 59)
+      ) {
+        endTime = endDateTime;
+      }
+    }
 
     // Get selected projects - รองรับทั้ง newsToProjects และ projects format
     let selectedProjects: string[] = [];
 
-    // ลองดู newsToProjects ก่อน (API ใหม่)
     if (
       selectedRecord.newsToProjects &&
       selectedRecord.newsToProjects.length > 0
     ) {
-      console.log("📋 Using newsToProjects:", selectedRecord.newsToProjects);
       selectedProjects = selectedRecord.newsToProjects
         .map((ntp) => {
-          // ตรวจสอบ structure ของ newsToProjects
           if (ntp.project && ntp.project.id) {
-            return ntp.project.id; // ใช้ project.id
+            return ntp.project.id;
           } else if (ntp.projectId) {
-            return ntp.projectId; // fallback ใช้ projectId
+            return ntp.projectId;
           }
           return null;
         })
-        .filter(Boolean); // กรองค่า null/undefined ออก
-    }
-    // Fallback ไปใช้ projects (format เดิม)
-    else if (selectedRecord.projects && selectedRecord.projects.length > 0) {
-      console.log("📋 Using projects:", selectedRecord.projects);
+        .filter(Boolean);
+    } else if (selectedRecord.projects && selectedRecord.projects.length > 0) {
       selectedProjects = selectedRecord.projects
         .map((p) => p.projectId)
-        .filter(Boolean); // กรองค่า null/undefined ออก
+        .filter(Boolean);
     }
-
-    console.log("📋 Selected Projects IDs:", selectedProjects);
-    console.log("📋 Available Project Options:", projectsData);
-
-    console.log("🔄 Setting form values:", {
-      title: selectedRecord.title,
-      startDate: startDate,
-      endDate: endDate,
-      startTime: startTime,
-      endTime: endTime,
-      projects: selectedProjects,
-      imageUrl: selectedRecord.imageUrl || "",
-    });
 
     form.setFieldsValue({
       title: selectedRecord.title || "",
@@ -125,22 +120,18 @@ export default function DeveloperNewsEditModal({
       endDate: endDate,
       startTime: startTime,
       endTime: endTime,
-      projects: selectedProjects, // ตั้งค่า selected projects
+      projects: selectedProjects,
       description: selectedRecord.description || "",
       url: selectedRecord.url || "",
-      imageUrl: selectedRecord.imageUrl || "", // ใช้ Form.Item name="imageUrl"
+      imageUrl: selectedRecord.imageUrl || "",
     });
   }, [selectedRecord, isEditModalOpen, form, projectsData]);
 
   const onFinish = (values: any) => {
     if (!selectedRecord?.id) {
-      console.error("❌ No selectedRecord.id found");
       message.error("Error: No news ID found");
       return;
     }
-
-    console.log("📝 Form values:", values);
-    console.log("📋 Selected record:", selectedRecord);
 
     callConfirmModal({
       title: "Edit news?",
@@ -148,23 +139,34 @@ export default function DeveloperNewsEditModal({
       okMessage: "Confirm",
       cancelMessage: "Cancel",
       onOk: () => {
-        // ตรวจสอบว่ามี date และ time หรือไม่
         if (!values.startDate || !values.endDate) {
           message.error("Please select both start date and end date");
           return;
         }
 
-        // ตรวจสอบว่ามี projects หรือไม่
         if (!values.projects || values.projects.length === 0) {
           message.error("Please select at least one project");
           return;
+        }
+
+        // จัดการ projects - ถ้าเลือก "all" ให้ส่งทุก project ไป
+        let projectsToSend = values.projects || [];
+        if (projectsToSend.includes("all")) {
+          const filteredProjects = projectsData.filter(
+            (project) =>
+              project.value !== "all" &&
+              project.label !== "All" &&
+              project.value !== "All" &&
+              project.label?.toLowerCase() !== "all"
+          );
+          projectsToSend = filteredProjects.map((project) => project.value);
         }
 
         const payload: DeveloperNewsEditPayload = {
           title: values.title,
           description: values.description || "",
           url: values.url || "",
-          imageUrl: values.imageUrl || "", // ใช้ imageUrl จาก form values
+          imageUrl: values.imageUrl || "",
           startDate: values.startDate
             ? dayjs(values.startDate).format("YYYY-MM-DD")
             : "",
@@ -177,24 +179,16 @@ export default function DeveloperNewsEditModal({
           endTime: values.endTime
             ? dayjs(values.endTime).format("HH:mm")
             : undefined,
-          projects:
-            values.projects?.map((id: string) => ({ projectId: id })) || [],
+          projects: projectsToSend.map((id: string) => ({ projectId: id })),
         };
-
-        console.log("🚀 Final payload:", payload);
-        console.log("🆔 News ID:", selectedRecord.id);
 
         updateMutation.mutate(
           { newsId: selectedRecord.id, payload },
           {
             onSuccess: () => {
-              console.log("✅ Update successful");
               form.resetFields();
               onOk();
               onRefresh();
-            },
-            onError: (error) => {
-              console.error("❌ Update error:", error);
             },
           }
         );
@@ -240,7 +234,6 @@ export default function DeveloperNewsEditModal({
             />
           </Form.Item>
 
-          {/* แก้ไขส่วนนี้ - ใช้ Form.Item กับ name="imageUrl" */}
           <Form.Item
             label="Image"
             name="imageUrl"
@@ -268,6 +261,15 @@ export default function DeveloperNewsEditModal({
                   size="large"
                   placeholder="Select date"
                   format="DD/MM/YYYY"
+                  disabledDate={(current) => {
+                    return current && current < dayjs().startOf("day");
+                  }}
+                  onChange={(date) => {
+                    const endDate = form.getFieldValue("endDate");
+                    if (endDate && date && endDate < date) {
+                      form.setFieldsValue({ endDate: null });
+                    }
+                  }}
                 />
               </Form.Item>
             </Col>
@@ -283,6 +285,23 @@ export default function DeveloperNewsEditModal({
                   size="large"
                   placeholder="Select date"
                   format="DD/MM/YYYY"
+                  disabledDate={(current) => {
+                    const startDate = form.getFieldValue("startDate");
+
+                    if (current && current < dayjs().startOf("day")) {
+                      return true;
+                    }
+
+                    if (
+                      startDate &&
+                      current &&
+                      current < dayjs(startDate).startOf("day")
+                    ) {
+                      return true;
+                    }
+
+                    return false;
+                  }}
                 />
               </Form.Item>
             </Col>
@@ -326,7 +345,16 @@ export default function DeveloperNewsEditModal({
                   : "Please select projects"
               }
               loading={projectsLoading}
-              options={projectsData}
+              options={[
+                { label: "All", value: "all" },
+                ...projectsData.filter(
+                  (project) =>
+                    project.value !== "all" &&
+                    project.label !== "All" &&
+                    project.value !== "All" &&
+                    project.label?.toLowerCase() !== "all"
+                ),
+              ]}
               fieldNames={{ label: "label", value: "value" }}
               suffixIcon={<SearchOutlined />}
               showSearch
@@ -340,21 +368,32 @@ export default function DeveloperNewsEditModal({
                 projectsLoading ? "Loading..." : "No projects found"
               }
               onSelect={(value, option) => {
-                console.log("🎯 Project selected:", { value, option });
-              }}
-              onDeselect={(value, option) => {
-                console.log("❌ Project deselected:", { value, option });
+                const currentValues = form.getFieldValue("projects") || [];
+
+                if (value === "all") {
+                  form.setFieldsValue({ projects: ["all"] });
+                } else {
+                  const newValues = currentValues.filter(
+                    (v: string) => v !== "all"
+                  );
+                  if (!newValues.includes(value)) {
+                    newValues.push(value);
+                  }
+                  form.setFieldsValue({ projects: newValues });
+                }
               }}
               onChange={(values) => {
-                console.log("🔄 Projects changed:", values);
-              }}
-              onDropdownVisibleChange={(open) => {
-                if (open) {
-                  console.log(
-                    "📋 Dropdown opened - Current form values:",
-                    form.getFieldValue("projects")
-                  );
-                  console.log("📋 Available options:", projectsData);
+                if (values && values.includes("all")) {
+                  if (values.length > 1) {
+                    const lastValue = values[values.length - 1];
+                    if (lastValue === "all") {
+                      form.setFieldsValue({ projects: ["all"] });
+                    } else {
+                      form.setFieldsValue({
+                        projects: values.filter((v: string) => v !== "all"),
+                      });
+                    }
+                  }
                 }
               }}
             />
@@ -406,7 +445,7 @@ export default function DeveloperNewsEditModal({
       onOk={() => {}}
       onCancel={handleClose}
       className="developerNewsFormModal"
-      destroyOnClose
+      destroyOnHidden
       width="840px"
       maskClosable={!isSubmitting}
     />

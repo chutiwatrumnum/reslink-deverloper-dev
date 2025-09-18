@@ -1,4 +1,4 @@
-// src/stores/models/DeveloperNewsModel.tsx
+// src/stores/models/DeveloperNewsModel.tsx - Clean Version
 import { createModel } from "@rematch/core";
 import {
   DeveloperNewsType,
@@ -34,7 +34,6 @@ const getDeveloperNewsData = async (params: GetDeveloperNewsParams) => {
       const result = await axios.get(url);
 
       if (result.status < 400) {
-        // Handle new API response structure { statusCode: 200, result: { total: number, data: [] } }
         let allDataDeveloperNews: any[] = [];
         let total: number = 0;
 
@@ -42,16 +41,13 @@ const getDeveloperNewsData = async (params: GetDeveloperNewsParams) => {
           const apiResult = result.data.result;
 
           if (apiResult.data && Array.isArray(apiResult.data)) {
-            // Map ข้อมูลจาก API response ใหม่ให้ตรงกับ interface
             allDataDeveloperNews = apiResult.data.map((item: any) => {
-              // แปลง newsToProjects เป็น projects format เดิม
               const projects =
                 item.newsToProjects?.map((ntp: any) => ({
                   projectId: ntp.projectId,
                   projectName: ntp.project?.name || ntp.projectId,
                 })) || [];
 
-              // แปลง createBy เป็น createdBy format เดิม
               const createdBy = item.createBy
                 ? {
                     givenName: item.createBy.givenName,
@@ -75,7 +71,6 @@ const getDeveloperNewsData = async (params: GetDeveloperNewsParams) => {
                 updatedAt: item.updatedAt,
                 projects: projects,
                 createdBy: createdBy,
-                // Keep original fields for backward compatibility
                 createBy: item.createBy,
                 newsToProjects: item.newsToProjects,
               };
@@ -87,7 +82,7 @@ const getDeveloperNewsData = async (params: GetDeveloperNewsParams) => {
             total = 0;
           }
         }
-        // Fallback สำหรับ response structure เดิม
+        // Fallback for other response structures
         else if (
           result.data?.result?.data &&
           Array.isArray(result.data.result.data)

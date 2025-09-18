@@ -5,7 +5,7 @@ export interface DeveloperNewsType {
     title: string;
     description?: string;
     url?: string;
-    imageUrl?: string;
+    imageUrl?: string | null;
     startDate: string;
     endDate: string;
     startTime?: string;
@@ -42,7 +42,7 @@ export interface DeveloperNewsAddNew {
     title: string;
     description?: string;
     url?: string;
-    imageUrl?: string;
+    imageUrl?: string | null;
     startDate: string;
     endDate: string;
     startTime?: string;
@@ -56,7 +56,7 @@ export interface DeveloperNewsEditPayload {
     title: string;
     description?: string;
     url?: string;
-    imageUrl?: string;
+    imageUrl?: string | null;
     startDate: string;
     endDate: string;
     startTime?: string;

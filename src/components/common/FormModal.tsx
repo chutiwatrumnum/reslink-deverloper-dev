@@ -12,7 +12,7 @@ interface CreateModalType {
   footer?: React.ReactNode[] | null;
   isOpen?: boolean;
   className?: string;
-  destroyOnClose?: boolean;
+  destroyOnHidden?: boolean;
   maskClosable?: boolean;
   width?: string;
 }
@@ -25,7 +25,7 @@ const CreateModal = ({
   footer = null,
   isOpen = false,
   className,
-  destroyOnClose = false,
+  destroyOnHidden = false,
   maskClosable = true,
 
   width = "30%",
@@ -51,9 +51,8 @@ const CreateModal = ({
         footer={footer}
         centered={true}
         forceRender={true}
-        destroyOnClose={destroyOnClose}
-        maskClosable={maskClosable}
-      >
+        destroyOnHidden={destroyOnHidden}
+        maskClosable={maskClosable}>
         {content}
       </Modal>
     </>

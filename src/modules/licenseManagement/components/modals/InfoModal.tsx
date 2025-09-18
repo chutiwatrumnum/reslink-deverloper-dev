@@ -52,7 +52,7 @@ const InfoModal: React.FC<Props> = ({
         }
         width={920}
         style={{ paddingTop: 12, paddingBottom: 16 }}
-        destroyOnClose>
+        destroyOnHidden>
         <div className="flex justify-center items-center py-20">
           <Spin size="large" />
           <span className="ml-3">Loading project information...</span>
@@ -75,7 +75,7 @@ const InfoModal: React.FC<Props> = ({
         }
         width={920}
         style={{ paddingTop: 12, paddingBottom: 16 }}
-        destroyOnClose>
+        destroyOnHidden>
         <Alert
           message="Error Loading Project Information"
           description={
@@ -111,7 +111,7 @@ const InfoModal: React.FC<Props> = ({
         }
         width={920}
         style={{ paddingTop: 12, paddingBottom: 16 }}
-        destroyOnClose>
+        destroyOnHidden>
         <Alert
           message="No Project Information Found"
           description="Project information is not available."
@@ -146,7 +146,7 @@ const InfoModal: React.FC<Props> = ({
       }
       width={920}
       style={{ paddingTop: 12, paddingBottom: 16 }}
-      destroyOnClose>
+      destroyOnHidden>
       {/* Project Overview */}
       <h5 className="text-base font-semibold mb-3 text-gray-800">
         Project overview

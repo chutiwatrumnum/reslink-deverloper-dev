@@ -1,10 +1,10 @@
-// src/utils/mutationsGroup/developerNewsMutations.ts
+// src/utils/mutationsGroup/developerNewsMutations.ts - Clean Version
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DeveloperNewsAddNew, DeveloperNewsEditPayload } from "../../stores/interfaces/DeveloperNews";
 import axios from "axios";
 import { message } from "antd";
 
-// Create developer news - ใช้ POST /news/developer/dashboard (ตามรูป API)
+// Create developer news
 export const useCreateDeveloperNewsMutation = () => {
     const queryClient = useQueryClient();
 
@@ -13,23 +13,13 @@ export const useCreateDeveloperNewsMutation = () => {
         scope: { id: "createDeveloperNews" },
         mutationFn: async (payload: DeveloperNewsAddNew) => {
             try {
-                // สร้าง datetime string ตาม format ที่ API ต้องการ
-                const startDateTime = payload.startTime ?
-                    `${payload.startDate}T${payload.startTime}:00.000Z` :
-                    `${payload.startDate}T00:00:00.000Z`;
-
-                const endDateTime = payload.endTime ?
-                    `${payload.endDate}T${payload.endTime}:00.000Z` :
-                    `${payload.endDate}T23:59:59.000Z`;
-
-                // สร้าง payload ตาม format ที่ API ต้องการ
                 const apiPayload = {
                     title: payload.title,
                     description: payload.description || "",
                     url: payload.url || "",
                     imageUrl: payload.imageUrl || "",
-                    startDate: startDateTime,
-                    endDate: endDateTime,
+                    startDate: payload.startDate,
+                    endDate: payload.endDate,
                     startTime: payload.startTime || null,
                     endTime: payload.endTime || null,
                     active: true,
@@ -37,10 +27,8 @@ export const useCreateDeveloperNewsMutation = () => {
                     projects: payload.projects || []
                 };
 
-                // ใช้ endpoint ที่ถูกต้องตาม API documentation
                 const response = await axios.post(`/news/developer/dashboard`, apiPayload);
 
-                // ตรวจสอบ response ตาม format ใหม่
                 if (response.data?.statusCode && response.data.statusCode >= 400) {
                     const errorMessage = response.data?.message ||
                         response.data?.error ||
@@ -67,7 +55,6 @@ export const useCreateDeveloperNewsMutation = () => {
         },
         onSuccess: (data) => {
             message.success("News created successfully!");
-            // Refresh news list
             queryClient.invalidateQueries({ queryKey: ["developerNews"] });
         },
         onError: (error: any) => {
@@ -76,7 +63,7 @@ export const useCreateDeveloperNewsMutation = () => {
     });
 };
 
-// Update developer news - ใช้ PUT /news/developer/{id}/dashboard (ตามรูป API)
+// Update developer news
 export const useUpdateDeveloperNewsMutation = () => {
     const queryClient = useQueryClient();
 
@@ -85,41 +72,24 @@ export const useUpdateDeveloperNewsMutation = () => {
         scope: { id: "updateDeveloperNews" },
         mutationFn: async ({ newsId, payload }: { newsId: string | number; payload: DeveloperNewsEditPayload }) => {
             try {
-                // ใช้ endpoint ที่ถูกต้องตาม API documentation
                 const endpoint = `/news/developer/${newsId}/dashboard`;
-
-                // สร้าง datetime string ตาม format ที่ API ต้องการ
-                const startDateTime = payload.startTime ?
-                    `${payload.startDate}T${payload.startTime}:00.000Z` :
-                    `${payload.startDate}T00:00:00.000Z`;
-
-                const endDateTime = payload.endTime ?
-                    `${payload.endDate}T${payload.endTime}:00.000Z` :
-                    `${payload.endDate}T23:59:59.000Z`;
-
-                // แก้ไข payload ให้ตรงกับที่ backend ต้องการ
                 const apiPayload = {
-                    id: typeof newsId === 'string' ? parseInt(newsId) : newsId, // เพิ่ม id field
+                    id: typeof newsId === 'string' ? parseInt(newsId) : newsId,
                     title: payload.title,
                     description: payload.description || "",
                     url: payload.url || "",
                     imageUrl: payload.imageUrl || "",
-                    startDate: startDateTime,
-                    endDate: endDateTime,
+                    startDate: payload.startDate,
+                    endDate: payload.endDate,
                     startTime: payload.startTime || null,
                     endTime: payload.endTime || null,
-                    active: true, // เพิ่ม active field
-                    isPublish: true, // เพิ่ม isPublish field
+                    active: true,
+                    isPublish: true,
                     projects: payload.projects || []
                 };
 
-                console.log("🔄 Update API Payload:", apiPayload);
-
                 const response = await axios.put(endpoint, apiPayload);
 
-                console.log("✅ Update Response:", response.data);
-
-                // ตรวจสอบ response ตาม format ใหม่
                 if (response.data?.statusCode && response.data.statusCode >= 400) {
                     throw new Error(response.data?.message || response.data?.error || "Update failed");
                 } else if (response.status >= 400) {
@@ -128,8 +98,6 @@ export const useUpdateDeveloperNewsMutation = () => {
 
                 return response.data;
             } catch (error: any) {
-                console.error("❌ Update Error:", error);
-
                 if (error.response) {
                     const errorMessage = error.response.data?.message ||
                         error.response.data?.error ||
@@ -142,18 +110,16 @@ export const useUpdateDeveloperNewsMutation = () => {
         },
         onSuccess: (data, { newsId }) => {
             message.success("News updated successfully!");
-            // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ["developerNews"] });
             queryClient.invalidateQueries({ queryKey: ["developerNewsDetail", newsId] });
         },
         onError: (error: any) => {
-            console.error("❌ Update Mutation Error:", error);
             message.error(error.message || "Failed to update news");
         },
     });
 };
 
-// Delete developer news - ใช้ DELETE /news/developer/{id}/dashboard (ตามรูป API)
+// Delete developer news
 export const useDeleteDeveloperNewsMutation = () => {
     const queryClient = useQueryClient();
 
@@ -162,12 +128,9 @@ export const useDeleteDeveloperNewsMutation = () => {
         scope: { id: "deleteDeveloperNews" },
         mutationFn: async (newsId: string | number) => {
             try {
-                // ใช้ endpoint ที่ถูกต้องตาม API documentation
                 const endpoint = `/news/developer/${newsId}/dashboard`;
-
                 const response = await axios.delete(endpoint);
 
-                // ตรวจสอบ response ตาม format ใหม่
                 if (response.data?.statusCode && response.data.statusCode >= 400) {
                     throw new Error(response.data?.message || response.data?.error || "Delete failed");
                 } else if (response.status >= 400) {
@@ -188,7 +151,6 @@ export const useDeleteDeveloperNewsMutation = () => {
         },
         onSuccess: (data, newsId) => {
             message.success("News deleted successfully!");
-            // Refresh news list
             queryClient.invalidateQueries({ queryKey: ["developerNews"] });
         },
         onError: (error: any) => {

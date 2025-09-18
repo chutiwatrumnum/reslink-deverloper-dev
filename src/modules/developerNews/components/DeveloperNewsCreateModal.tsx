@@ -62,6 +62,20 @@ export default function DeveloperNewsCreateModal({
       cancelMessage: "Cancel",
       onOk: () => {
         if (!createMutation) return;
+
+        // จัดการ projects - ถ้าเลือก "all" ให้ส่งทุก project ไป
+        let projectsToSend = values.projects || [];
+        if (projectsToSend.includes("all")) {
+          const filteredProjects = projectsData.filter(
+            (project) =>
+              project.value !== "all" &&
+              project.label !== "All" &&
+              project.value !== "All" &&
+              project.label?.toLowerCase() !== "all"
+          );
+          projectsToSend = filteredProjects.map((project) => project.value);
+        }
+
         const payload: DeveloperNewsAddNew = {
           title: values.title,
           description: values.description || "",
@@ -79,8 +93,7 @@ export default function DeveloperNewsCreateModal({
           endTime: values.endTime
             ? dayjs(values.endTime).format("HH:mm")
             : undefined,
-          projects:
-            values.projects?.map((id: string) => ({ projectId: id })) || [],
+          projects: projectsToSend.map((id: string) => ({ projectId: id })),
         };
 
         createMutation.mutate(payload, {
@@ -108,9 +121,7 @@ export default function DeveloperNewsCreateModal({
       onFinish={onFinish}
       className="developerNews-form"
       initialValues={{ type: "developer_news" }}>
-      {/* GRID 2 คอลัมน์ */}
       <Row gutter={24} className="developerNews-grid">
-        {/* LEFT COLUMN */}
         <Col span={12} className="developerNews-col-left">
           <Form.Item
             label="Title"
@@ -149,7 +160,7 @@ export default function DeveloperNewsCreateModal({
             />
           </Form.Item>
         </Col>
-        {/* RIGHT COLUMN */}
+
         <Col span={12} className="developerNews-col-right">
           <Row gutter={16}>
             <Col span={12}>
@@ -164,6 +175,15 @@ export default function DeveloperNewsCreateModal({
                   size="large"
                   placeholder="Select date"
                   format="DD/MM/YYYY"
+                  disabledDate={(current) => {
+                    return current && current < dayjs().startOf("day");
+                  }}
+                  onChange={(date) => {
+                    const endDate = form.getFieldValue("endDate");
+                    if (endDate && date && endDate < date) {
+                      form.setFieldsValue({ endDate: null });
+                    }
+                  }}
                 />
               </Form.Item>
             </Col>
@@ -179,11 +199,29 @@ export default function DeveloperNewsCreateModal({
                   size="large"
                   placeholder="Select date"
                   format="DD/MM/YYYY"
+                  disabledDate={(current) => {
+                    const startDate = form.getFieldValue("startDate");
+
+                    if (current && current < dayjs().startOf("day")) {
+                      return true;
+                    }
+
+                    if (
+                      startDate &&
+                      current &&
+                      current < dayjs(startDate).startOf("day")
+                    ) {
+                      return true;
+                    }
+
+                    return false;
+                  }}
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Start time" name="startTime">
+              <Form.Item label="Start time" name="startTime"
+                rules={[{ required: true, message: "Please select time!" }]}>
                 <TimePicker
                   style={{ width: "100%" }}
                   size="large"
@@ -193,7 +231,8 @@ export default function DeveloperNewsCreateModal({
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="End time" name="endTime">
+              <Form.Item label="End time" name="endTime"
+                rules={[{ required: true, message: "Please select time!" }]}>
                 <TimePicker
                   style={{ width: "100%" }}
                   size="large"
@@ -222,7 +261,16 @@ export default function DeveloperNewsCreateModal({
                   : "Please select projects"
               }
               loading={projectsLoading}
-              options={projectsData}
+              options={[
+                { label: "All", value: "all" },
+                ...projectsData.filter(
+                  (project) =>
+                    project.value !== "all" &&
+                    project.label !== "All" &&
+                    project.value !== "All" &&
+                    project.label?.toLowerCase() !== "all"
+                ),
+              ]}
               fieldNames={{ label: "label", value: "value" }}
               suffixIcon={<SearchOutlined />}
               showSearch
@@ -241,6 +289,35 @@ export default function DeveloperNewsCreateModal({
                   "No projects found"
                 )
               }
+              onSelect={(value, option) => {
+                const currentValues = form.getFieldValue("projects") || [];
+
+                if (value === "all") {
+                  form.setFieldsValue({ projects: ["all"] });
+                } else {
+                  const newValues = currentValues.filter(
+                    (v: string) => v !== "all"
+                  );
+                  if (!newValues.includes(value)) {
+                    newValues.push(value);
+                  }
+                  form.setFieldsValue({ projects: newValues });
+                }
+              }}
+              onChange={(values) => {
+                if (values && values.includes("all")) {
+                  if (values.length > 1) {
+                    const lastValue = values[values.length - 1];
+                    if (lastValue === "all") {
+                      form.setFieldsValue({ projects: ["all"] });
+                    } else {
+                      form.setFieldsValue({
+                        projects: values.filter((v: string) => v !== "all"),
+                      });
+                    }
+                  }
+                }
+              }}
             />
           </Form.Item>
 
@@ -290,7 +367,7 @@ export default function DeveloperNewsCreateModal({
       onOk={() => {}}
       onCancel={handleClose}
       className="developerNewsFormModal"
-      destroyOnClose
+      destroyOnHidden
       width="840px"
       maskClosable={!isSubmitting}
     />

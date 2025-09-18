@@ -75,10 +75,9 @@ const DeveloperNews = () => {
   // Date picker
   const { RangePicker } = DatePicker;
 
-  // แก้ไข handleDate ให้ส่ง format YYYY-MM แทน
+  // Handle date filter
   const handleDate = async (dates: any, dateStrings: [string, string]) => {
     if (dates && dates.length === 2) {
-      // ใช้ YYYY-MM format สำหรับ API
       const startMonth = dayjs(dates[0]).format("YYYY-MM");
       const endMonth = dayjs(dates[1]).format("YYYY-MM");
 
@@ -89,7 +88,6 @@ const DeveloperNews = () => {
         curPage: 1,
       }));
     } else {
-      // Clear date filter
       setParams((prev) => ({
         ...prev,
         startMonth: undefined,
@@ -142,7 +140,7 @@ const DeveloperNews = () => {
     refetchNews();
   };
 
-  // Show detail modal - ใช้ข้อมูลจาก table
+  // Show detail modal
   const showDetailModal = (record: DeveloperNewsType) => {
     setSelectedRecord(record);
     setDetailModalVisible(true);
@@ -190,30 +188,34 @@ const DeveloperNews = () => {
     }));
   };
 
-  // Get status tag
-  const getStatusTag = (record: DeveloperNewsType) => {
-    const now = dayjs();
-    const startDate = dayjs(record.startDate);
-    const endDate = dayjs(record.endDate);
+  // Get status tag with time validation (cleaned version)
+ const getStatusTag = (record: DeveloperNewsType) => {
+     const now = dayjs();
+     const startDateTime = record.startTime
+       ? dayjs(`${record.startDate} ${record.startTime}`, "YYYY-MM-DD HH:mm")
+       : dayjs(record.startDate);
 
-    if (!record.active || !record.isPublish) {
-      return <Tag color="red">Inactive</Tag>;
-    }
+     const endDateTime = record.endTime
+       ? dayjs(`${record.endDate} ${record.endTime}`, "YYYY-MM-DD HH:mm")
+       : dayjs(record.endDate).endOf("day"); // ถ้าไม่มี endTime ให้เป็น 23:59:59
 
-    if (now.isBefore(startDate)) {
-      return <Tag color="blue">Scheduled</Tag>;
-    }
+     if (!record.active || !record.isPublish) {
+       return <Tag color="red">Inactive</Tag>;
+     }
 
-    if (now.isAfter(endDate)) {
-      return <Tag color="gray">Expired</Tag>;
-    }
+     if (now.isBefore(startDateTime)) {
+       return <Tag color="blue">Scheduled</Tag>;
+     }
 
-    return <Tag color="green">Activated</Tag>;
-  };
+     if (now.isAfter(endDateTime)) {
+       return <Tag color="gray">Expired</Tag>;
+     }
 
-  // Get creator name from new API format - ไม่มี fallback data
+     return <Tag color="green">Activated</Tag>;
+   };
+
+  // Get creator name (cleaned version)
   const getCreatorName = (record: DeveloperNewsType) => {
-    // ใช้ createBy จาก API ใหม่
     if (record.createBy) {
       const fullName = `${record.createBy.givenName || ""} ${
         record.createBy.familyName || ""
@@ -221,7 +223,6 @@ const DeveloperNews = () => {
       return fullName || "-";
     }
 
-    // Fallback ไปใช้ createdBy format เดิม
     if (typeof record.createdBy === "object" && record.createdBy) {
       const fullName = `${record.createdBy.givenName || ""} ${
         record.createdBy.familyName || ""
@@ -413,8 +414,8 @@ const DeveloperNews = () => {
             style={{ width: "100%" }}
             placeholder={["Start month", "End month"]}
             onChange={handleDate}
-            picker="month" // เปลี่ยนเป็น month picker
-            format="YYYY-MM" // กำหนด format
+            picker="month"
+            format="YYYY-MM"
             suffixIcon={<CalendarOutlined />}
             allowClear
             size="large"
@@ -498,7 +499,7 @@ const DeveloperNews = () => {
         projectsLoading={projectsLoading}
       />
 
-      {/* Detail Modal - ใช้ข้อมูลจาก table */}
+      {/* Detail Modal */}
       <DeveloperNewsDetailModal
         visible={detailModalVisible}
         onClose={closeDetailModal}

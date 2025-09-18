@@ -275,7 +275,7 @@ const TeamInvitationCreateModal = ({
       onOk={onOk}
       onCancel={onModalClose}
       className="developerInvitationFormModal"
-      destroyOnClose={true}
+      destroyOnHidden={true}
       maskClosable={!isSubmitting}
     />
   );
