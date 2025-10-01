@@ -22,6 +22,7 @@ import {
   LicenseIcon,
   NewsIcon,
   ProfileIcon,
+  PaymentHistoryIcon,
 } from "../../assets/icons/Icons";
 import IconLoader from "../common/IconLoader";
 
@@ -108,7 +109,7 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
 
         case pathname.includes("/license") ||
           pathname.includes("/paymentHistory"):
-          return ["license"];
+          return ["licenseManagement"];
         default:
           return [];
       }
@@ -348,7 +349,7 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
                 />
               }
             >
-              <Link to={`${main_link}/projectList`}>Project team list</Link>
+              <Link to={`${main_link}/projectList`}>Project list</Link>
             </Menu.Item>
           </SubMenu>
           <Menu.Item
@@ -390,12 +391,23 @@ const SideMenu = ({ onMenuChange }: { onMenuChange: () => void }) => {
               key={`${main_link}/license`}
               icon={
                 <LicenseIcon
-                  color={iconSubMenuColorSelector("license")}
+                  color={iconSubMenuColorSelector("licenseManagement")}
                   className="sideMenuIcon"
                 />
               }
             >
               <Link to={`${main_link}/license`}>License</Link>
+            </Menu.Item>
+            <Menu.Item
+              key={`${main_link}/paymentHistory`}
+              icon={
+                <PaymentHistoryIcon
+                  color={iconSubMenuColorSelector("licenseManagement")}
+                  className="sideMenuIcon"
+                />
+              }
+            >
+              <Link to={`${main_link}/paymentHistory`}>Payment history</Link>
             </Menu.Item>
           </SubMenu>
         </Menu>

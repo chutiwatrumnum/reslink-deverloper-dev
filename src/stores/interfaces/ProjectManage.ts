@@ -28,7 +28,7 @@ export interface CountryDataTypes {
   subregion_id?: number;
   nationality?: string;
   timezones: {
-    zoneName: string ;
+    zoneName: string;
     gmtOffset?: number;
     gmtOffsetName?: string;
     abbreviation?: string;
@@ -170,7 +170,7 @@ export type ProjectManagementUpdatePayload = {
     id?: number;
     nameTh?: number;
     nameEn?: number;
-  }
+  };
 };
 
 export interface ProjectFromDataType {
@@ -187,6 +187,7 @@ export interface ProjectFromDataType {
   vmsPassword?: string;
   contactNumber?: string;
   email?: string;
+  country?: string;
   province?: string;
   district?: string;
   subdistrict?: string;
@@ -206,7 +207,7 @@ export interface ProjectFromDataType {
 }
 export interface ProjectManagementParams {
   active?: boolean;
-  status: number[];
+  status?: number[];
   perPage: number;
   curPage: number;
   search?: string;
@@ -221,8 +222,8 @@ export interface ProjectManageType {
   image?: string;
   logo?: string;
   active?: boolean | string;
-  lat?: string | number;
-  long?: string | number;
+  lat?: number;
+  long?: number;
   vmsUrl?: string;
   vmsUsername?: string;
   vmsPassword?: string;
@@ -252,8 +253,8 @@ export interface ProjectManageType {
       name?: string;
     };
   };
-  timeZone?: string
-  country?: string
+  timeZone?: string;
+  country?: string;
 }
 
 export interface ProjectManagementState {

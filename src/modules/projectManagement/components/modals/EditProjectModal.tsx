@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // Components
-import { Form, Row, Col, Input, Radio, Select, Flex, Spin, Button } from "antd";
+import { Form, Row, Col, Input, Radio, Select, Spin, Modal } from "antd";
 import UploadImageWithCrop from "../UploadImageWithCrop";
 import FormModal from "../../../../components/common/FormModal";
 import { callConfirmModal } from "../../../../components/common/Modal";
@@ -35,14 +35,12 @@ import "../../styles/stepModalCreate.css";
 import "../../styles/newProjectForm.css";
 
 type EditProjectModalPropsType = {
-  data?: ProjectManageType;
+  data: ProjectManageType | null;
   isEditModalOpen: boolean;
   onOk: () => void;
   onCancel: () => void;
   onRefresh: () => void;
 };
-
-const DEFAULT_CENTER = { lat: 13.736717, lng: 100.523186 };
 
 const EditProjectModal = ({
   data,
@@ -52,7 +50,6 @@ const EditProjectModal = ({
   onRefresh,
 }: EditProjectModalPropsType) => {
   const [form] = Form.useForm();
-  const [open, setOpen] = useState(false);
   // ===== Loading ระหว่าง Save =====
   const [editProject, setEditProject] = useState(false);
 
@@ -70,8 +67,8 @@ const EditProjectModal = ({
       onOk: async () => {
         const formData = {
           ...value,
-          lat: mapCoordsRef.current.lat,
-          long: mapCoordsRef.current.lng,
+          lat: mapCoordsRef?.current?.lat ?? undefined,
+          long: mapCoordsRef?.current?.lng ?? undefined,
         };
         if (formData.image === data?.image) {
           delete formData.image;
@@ -79,6 +76,7 @@ const EditProjectModal = ({
         if (formData.logo === data?.logo) {
           delete formData.logo;
         }
+
         try {
           editMutation
             .mutateAsync({ id: data?.id ?? "", payload: formData })
@@ -106,15 +104,13 @@ const EditProjectModal = ({
     setSubDistrictValue("");
     setPostalCodeValue("");
     setTimezone("");
-    setHasPickedLocation(false);
-    mapCoordsRef.current = DEFAULT_CENTER;
+    hasPickedLocationRef.current = false;
+    mapCoordsRef.current = undefined;
     onCancel();
   };
 
   useEffect(() => {
-    setOpen(isEditModalOpen);
     if (data && isEditModalOpen) {
-      console.log(data);
       form.setFieldsValue({
         projectTypeId: data.type?.id?.toString(),
         name: data.name,
@@ -143,9 +139,12 @@ const EditProjectModal = ({
 
       // Set map coordinates
       if (data.lat && data.long) {
-        mapCoordsRef.current = { lat: data.lat, lng: data.long };
-        initialCenterRef.current = { lat: data.lat, lng: data.long };
-        setHasPickedLocation(true);
+        mapCoordsRef.current = {
+          lat: data.lat,
+          lng: data.long,
+        };
+        hasPickedLocationRef.current = true;
+        console.log(mapCoordsRef.current);
       }
     }
   }, [isEditModalOpen, data]);
@@ -159,36 +158,26 @@ const EditProjectModal = ({
   };
 
   // ===== Map: no-flicker setup =====
-  const mapCoordsRef = useRef<{ lat: number; lng: number }>(DEFAULT_CENTER);
-  const initialCenterRef = useRef(DEFAULT_CENTER);
-  const [hasPickedLocation, setHasPickedLocation] = useState(false);
+  const mapCoordsRef = useRef<{ lat: number; lng: number }>();
+  const hasPickedLocationRef = useRef<boolean>(false);
 
-  const handleLocationChange = useCallback(
-    (lat: number, lng: number) => {
-      mapCoordsRef.current = { lat, lng };
-      if (
-        !hasPickedLocation &&
-        (lat !== DEFAULT_CENTER.lat || lng !== DEFAULT_CENTER.lng)
-      ) {
-        setHasPickedLocation(true);
-      }
-    },
-    [hasPickedLocation]
-  );
+  const handleLocationChange = useCallback((lat: number, lng: number) => {
+    mapCoordsRef.current = { lat, lng };
+  }, []);
 
   // สร้าง MapElement แค่ครั้งเดียว (ไม่ re-mount เมื่อ state อื่นเปลี่ยน)
   const MapElement = useMemo(
     () => (
       <GoogleMapComponent
         onLocationChange={handleLocationChange}
-        initialLat={initialCenterRef.current.lat}
-        initialLng={initialCenterRef.current.lng}
+        initialLat={data?.lat}
+        initialLng={data?.long}
         height={470}
         width="100%"
         zoom={12}
       />
     ),
-    [handleLocationChange]
+    [handleLocationChange, data]
   );
 
   //Countries Select State
@@ -338,8 +327,8 @@ const EditProjectModal = ({
     const selectedDistrict = allDistricts.find((d) => d.name === value);
     const districtId = selectedDistrict?.id;
 
-    console.log("District Name: ", value);
-    console.log("District ID: ", districtId);
+    // console.log("District Name: ", value);
+    // console.log("District ID: ", districtId);
 
     setSubDistrictValue("");
     setPostalCodeValue("");
@@ -360,9 +349,9 @@ const EditProjectModal = ({
       zipCode: zipCode?.toString(),
     });
 
-    console.log("Sub-District Name: ", value);
-    console.log("Sub-District ID: ", subDistrictId);
-    console.log("Zip Code: ", zipCode);
+    // console.log("Sub-District Name: ", value);
+    // console.log("Sub-District ID: ", subDistrictId);
+    // console.log("Zip Code: ", zipCode);
   };
   const ProjectForm = () => {
     return (
@@ -618,12 +607,8 @@ const EditProjectModal = ({
                 rules={[
                   {
                     validator: () => {
-                      const { lat, lng } = mapCoordsRef.current;
-                      if (
-                        !hasPickedLocation ||
-                        (lat === DEFAULT_CENTER.lat &&
-                          lng === DEFAULT_CENTER.lng)
-                      ) {
+                      const { lat, lng } = mapCoordsRef.current ?? {};
+                      if (!hasPickedLocationRef.current || !lat || !lng) {
                         return Promise.reject(
                           "Please select a location on the map"
                         );
@@ -634,12 +619,6 @@ const EditProjectModal = ({
                 ]}
               >
                 {MapElement}
-                {hasPickedLocation && (
-                  <div style={{ marginTop: 12, fontSize: 12, color: "#333" }}>
-                    Selected: {mapCoordsRef.current.lat.toFixed(6)},{" "}
-                    {mapCoordsRef.current.lng.toFixed(6)}
-                  </div>
-                )}
               </Form.Item>
             </Col>
           </Row>
@@ -664,15 +643,17 @@ const EditProjectModal = ({
   };
 
   return (
-    <FormModal
-      width="90%"
-      isOpen={open}
-      title="Edit Project"
-      content={<ProjectForm />}
-      onOk={onOk}
-      onCancel={onModalClose}
-      className="projectEditFormModal"
-    />
+    <>
+      <FormModal
+        width="90%"
+        isOpen={isEditModalOpen}
+        title="Edit Project"
+        content={<ProjectForm />}
+        onOk={onOk}
+        onCancel={onModalClose}
+        className="projectEditFormModal"
+      />
+    </>
   );
 };
 

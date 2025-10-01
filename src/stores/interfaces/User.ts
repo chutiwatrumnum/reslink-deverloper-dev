@@ -5,8 +5,8 @@ export interface UserType {
   userLastName: string;
   isAuth: boolean;
   userToken: string | null;
-  isSignUpModalOpen?: boolean;    // เพิ่มบรรทัดนี้
-  isConfirmDetailModalOpen?: boolean;  // เพิ่มบรรทัดนี้
+  isSignUpModalOpen?: boolean; // เพิ่มบรรทัดนี้
+  isConfirmDetailModalOpen?: boolean; // เพิ่มบรรทัดนี้
 }
 
 export interface LoginPayloadType {
@@ -15,5 +15,8 @@ export interface LoginPayloadType {
 }
 
 export interface ResetPasswordPayloadType {
-  email: string;
+  token: string | null;
+  sessionId: string | null;
+  newPassword: string;
+  confirmNewPassword: string;
 }

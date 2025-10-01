@@ -18,6 +18,9 @@ import {
   Empty,
   Space,
   Spin,
+  Divider,
+  Card,
+  Timeline,
 } from "antd";
 import CreateProjectModal from "../components/modals/CreateProjectModal";
 import EditProjectModal from "../components/modals/EditProjectModal";
@@ -29,8 +32,6 @@ import type { ColumnsType } from "antd/es/table";
 import type { ProjectManageType } from "../../../stores/interfaces/ProjectManage";
 // Icons
 import {
-  EditOutlined,
-  InfoCircleOutlined,
   PictureOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -39,6 +40,7 @@ import {
   ContainerOutlined,
   CheckCircleFilled,
   WarningOutlined,
+  CloseCircleFilled,
 } from "@ant-design/icons";
 import { InfoIcon, TrashIcon, EditIcon } from "../../../assets/icons/Icons";
 // APIs & Data
@@ -49,10 +51,10 @@ import {
 import { useDeleteProjectManagementMutation } from "../../../utils/mutationsGroup/projectManagement";
 import "../styles/projectManagement.css";
 
-import dayjs from "dayjs";
-
 const ProjectManagement = () => {
   const [curPage, setCurPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const [isApproved, setIsApproved] = useState(true);
   const [search, setSearch] = useState<string>("");
 
@@ -66,6 +68,7 @@ const ProjectManagement = () => {
   } = useProjectManagementQuery({
     active: isApproved,
     curPage: curPage,
+    perPage: pageSize,
     search,
   });
 
@@ -77,11 +80,9 @@ const ProjectManagement = () => {
 
   const licenseData = featureByProjectId || [];
 
-  const primaryLicense = licenseData[0];
-
   const [currentStep, setCurrentStep] = useState<number>(1);
 
-  const [dataEdit, setDataEdit] = useState<ProjectManageType>();
+  const [dataEdit, setDataEdit] = useState<ProjectManageType | null>(null);
 
   // Modal states
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
@@ -92,6 +93,15 @@ const ProjectManagement = () => {
     useState<boolean>(false);
 
   const [refresh, setRefresh] = useState<boolean>(false);
+
+  const handlePaginationChange = (page: number, size?: number) => {
+    console.log("Pagination change:", { page, size });
+    setCurPage(page);
+    if (size && size !== pageSize) {
+      setPageSize(size);
+      setCurPage(1); // Reset to page 1 when page size changes
+    }
+  };
 
   // Ant component configuration
   const { Text } = Typography;
@@ -151,6 +161,7 @@ const ProjectManagement = () => {
     setIsEditProjectModalOpen(false);
   };
   const onEditProjectCancel = () => {
+    setDataEdit(null);
     setIsEditProjectModalOpen(false);
   };
 
@@ -865,6 +876,93 @@ const ProjectManagement = () => {
   };
   const statusStyle = getStatusStyle(selectedRecord?.statusDisplay);
 
+  const sortedLicenses = [...licenseData].sort((a, b) => {
+    const getStart = (features) => {
+      if (!features) return new Date(0);
+      return new Date(
+        features?.period?.split("-")[0]?.trim().split("/").reverse().join("-")
+      );
+    };
+
+    const aStart = getStart(a.features?.standard || a.features?.optional);
+    const bStart = getStart(b.features?.standard || b.features?.optional);
+
+    return bStart - aStart;
+  });
+
+  // STEP 2: Pick current + previous
+  const currentLicense = sortedLicenses[0];
+  const previousLicenses = sortedLicenses.slice(1);
+
+  const renderFeatures = (license: any) => {
+    return (
+      <Space direction="vertical" style={{ width: "100%" }}>
+        {/* Standard features */}
+        {license?.features?.standard && (
+          <Collapse
+            style={{ borderRadius: 10 }}
+            items={[
+              {
+                key: "1",
+                label: `Standard (License period: ${license.features.standard.period})`,
+                children: (
+                  <Row gutter={[8, 8]}>
+                    {license.features.standard.features?.map(
+                      (feature: any, index: number) => (
+                        <Col span={8} key={index}>
+                          <Flex gap={8} align="start">
+                            <CheckCircleFilled
+                              style={{ color: "var(--success-color)" }}
+                            />
+                            <Text style={{ margin: 0, fontSize: 12 }}>
+                              {feature.feature.name}
+                            </Text>
+                          </Flex>
+                        </Col>
+                      )
+                    )}
+                  </Row>
+                ),
+              },
+            ]}
+          />
+        )}
+
+        {/* Optional features */}
+        {license?.features?.optional?.features?.length > 0 && (
+          <Collapse
+            style={{ borderRadius: 10 }}
+            key={license.licenseId}
+            items={[
+              {
+                key: "optional",
+                label: `Optional (License period: ${license.features.optional.period})`,
+                children: (
+                  <Row gutter={[8, 8]}>
+                    {license.features.optional.features.map(
+                      (feature, idx: number) => (
+                        <Col span={8} key={idx}>
+                          <Flex gap={8} align="start">
+                            <CheckCircleFilled
+                              style={{ color: "var(--success-color)" }}
+                            />
+                            <Text style={{ margin: 0, fontSize: 12 }}>
+                              {feature.feature.name}
+                            </Text>
+                          </Flex>
+                        </Col>
+                      )
+                    )}
+                  </Row>
+                ),
+              },
+            ]}
+          />
+        )}
+      </Space>
+    );
+  };
+
   return (
     <>
       <Header title="Project management" />
@@ -908,12 +1006,14 @@ const ProjectManagement = () => {
             rowKey="id"
             pagination={{
               current: curPage,
-              pageSize: 10,
+              pageSize: pageSize,
               total: projectData?.total || 0,
-              onChange: (page) => setCurPage(page),
-              showSizeChanger: false,
+              showSizeChanger: true,
               // showTotal: (total, range) =>
               //   `${range[0]}-${range[1]} of ${total} items`,
+              pageSizeOptions: ["10", "20", "50", "100"],
+              onChange: handlePaginationChange,
+              onShowSizeChange: handlePaginationChange,
             }}
             scroll={{ x: "max-content" }}
           />
@@ -1023,7 +1123,7 @@ const ProjectManagement = () => {
                   )}
                 </Flex>
               </Col>
-              {/* Text Info */}
+              {/* Project Info */}
               <Col span={9}>
                 <Row style={{ marginBottom: 6 }}>
                   <Col span={24}>
@@ -1152,17 +1252,8 @@ const ProjectManagement = () => {
               </Col>
               {/* Standard package and Optional feature preview */}
               <Col span={11}>
-                <Flex vertical={true} gap={6} style={{ marginBottom: 6 }}>
-                  <Text strong>
-                    Current package:{" "}
-                    {infoLoading ? (
-                      <></>
-                    ) : (
-                      `Standard + ${
-                        primaryLicense?.optionalFeatureLength || 0
-                      } optional features`
-                    )}
-                  </Text>
+                <Flex vertical={true} style={{ marginBottom: 6 }}>
+                  <Text strong>Package information</Text>
                 </Flex>
                 {infoLoading ? (
                   <Spin tip="loading">
@@ -1188,103 +1279,79 @@ const ProjectManagement = () => {
                     <Empty />
                   </Flex>
                 ) : (
-                  // Your existing collapse/feature rendering logic
-                  <Space direction="vertical" style={{ width: "100%" }}>
-                    {/* Standard Features */}
-                    <Collapse
-                      style={{ borderRadius: 10 }}
-                      collapsible="header"
-                      defaultActiveKey={["1"]}
-                      items={[
-                        {
-                          key: "1",
-                          label: `Standard (License period: ${
-                            primaryLicense?.features?.standard?.period || "N/A"
-                          })`,
-                          children: (
-                            <Row gutter={[8, 8]}>
-                              {primaryLicense?.features?.standard?.features?.map(
-                                (feature, index) => (
-                                  <Col span={8} key={index}>
-                                    <Flex gap={8} align="start">
-                                      <CheckCircleFilled
-                                        style={{
-                                          color: "var(--success-color)",
-                                        }}
-                                      />
-                                      <Text style={{ margin: 0, fontSize: 12 }}>
-                                        {feature.feature.name}
-                                      </Text>
-                                    </Flex>
-                                  </Col>
-                                )
-                              ) || (
-                                <Col span={24}>
-                                  <Text>No standard features</Text>
-                                </Col>
-                              )}
-                            </Row>
-                          ),
-                        },
-                      ]}
-                    />
+                  <div
+                    style={{
+                      border: "1px solid #C6C8C9",
+                      borderRadius: 16,
+                      padding: 14,
+                    }}
+                  >
+                    {/* Current license */}
+                    {infoLoading ? (
+                      <></>
+                    ) : (
+                      <Flex vertical={true} style={{ marginBottom: 6 }}>
+                        <Flex gap={4}>
+                          {/* <CheckCircleFilled
+                            style={{ color: "var(--success-color)" }}
+                          /> */}
+                          <Text strong>Order no: {currentLicense.orderNo}</Text>
+                        </Flex>
+                        <Text style={{ fontWeight: 500 }}>
+                          {currentLicense?.features?.standard
+                            ? `Standard + `
+                            : ""}
+                          {currentLicense?.optionalFeatureLength || 0} optional
+                          features
+                        </Text>
+                      </Flex>
+                    )}
+                    {renderFeatures(currentLicense)}
+                    {/* Previous Packages */}
+                    {previousLicenses.length > 0 && (
+                      <>
+                        <Divider />
+                        {previousLicenses.map((license) => (
+                          <div
+                            key={license.licenseId}
+                            style={{ marginTop: 12 }}
+                          >
+                            <Flex vertical={true} style={{ marginBottom: 6 }}>
+                              <Flex gap={4}>
+                                <CloseCircleFilled />
+                                <Text
+                                  strong
+                                  style={{ color: "#6a6a6a" }}
+                                  delete
+                                >
+                                  Order no: {license.orderNo}
+                                </Text>
+                              </Flex>
 
-                    {primaryLicense?.features?.optional?.features &&
-                      primaryLicense.features.optional.features.length > 0 && (
-                        <>
-                          {Object.entries(
-                            primaryLicense.features.optional.features.reduce(
-                              (i, feature) => {
-                                const period = `${primaryLicense?.features?.optional?.period}`;
-                                if (!i[period]) {
-                                  i[period] = [];
-                                }
-                                i[period].push(feature);
-                                return i;
-                              },
-                              {}
-                            )
-                          ).map(([period, features], periodIndex) => (
-                            <Collapse
-                              style={{ borderRadius: 10 }}
-                              key={`optional-${periodIndex}`}
-                              items={[
-                                {
-                                  key: `optional-period-${periodIndex}`,
-                                  label: `Optional (License period: ${period})`,
-                                  children: (
-                                    <Row gutter={[8, 8]}>
-                                      {features.map((feature, featureIndex) => (
-                                        <Col
-                                          span={8}
-                                          key={`feature-${periodIndex}-${featureIndex}`}
-                                        >
-                                          <Flex gap={8} align="start">
-                                            <CheckCircleFilled
-                                              style={{
-                                                color: "var(--success-color)",
-                                              }}
-                                            />
-                                            <Text
-                                              style={{
-                                                margin: 0,
-                                                fontSize: 12,
-                                              }}
-                                            >
-                                              {feature.feature.name}
-                                            </Text>
-                                          </Flex>
-                                        </Col>
-                                      ))}
-                                    </Row>
-                                  ),
-                                },
-                              ]}
-                            />
-                          ))}
-                        </>
-                      )}
-                  </Space>
+                              <Text
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  color: "#949494",
+                                }}
+                              >
+                                {license.features?.standard
+                                  ? `Standard + `
+                                  : ""}
+                                {license.optionalFeatureLength || 0} optional
+                                features&nbsp;
+                                {/* (
+                                {license?.features?.standard?.period ||
+                                  license?.features?.optional?.period}
+                                ) */}
+                              </Text>
+                            </Flex>
+                            {renderFeatures(license)}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
                 )}
               </Col>
             </Row>

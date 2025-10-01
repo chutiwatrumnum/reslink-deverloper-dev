@@ -131,7 +131,6 @@ const LicenseManagement = () => {
       dataIndex: "packageName",
       key: "packageName",
       align: "center",
-      render: (pkg) => pkg || "Standard",
     },
     {
       title: "Order no.",

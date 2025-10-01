@@ -90,9 +90,9 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
         mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
           center: { lat: initialLat, lng: initialLng },
           zoom,
-          mapTypeControl: true,
+          mapTypeControl: false,
           streetViewControl: true,
-          fullscreenControl: true,
+          fullscreenControl: false,
           zoomControl: true,
         });
 
@@ -129,7 +129,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
               if (place.geometry?.location && mapRef.current) {
                 const lat = place.geometry.location.lat();
                 const lng = place.geometry.location.lng();
-                mapRef.current.setCenter({ lat, lng });
+                mapRef.current.panTo({ lat, lng });
                 mapRef.current.setZoom(16);
                 setMarker(lat, lng);
                 onLocationChange?.(lat, lng);
@@ -158,7 +158,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
   // --- ถ้า props ศูนย์กลาง/ซูมเปลี่ยน -> อัปเดตแผนที่ (ไม่ต้อง re-init)
   useEffect(() => {
     if (!mapRef.current) return;
-    mapRef.current.setCenter({ lat: initialLat, lng: initialLng });
+    mapRef.current.panTo({ lat: initialLat, lng: initialLng });
     mapRef.current.setZoom(zoom);
     setMarker(initialLat, initialLng);
   }, [initialLat, initialLng, zoom, setMarker]);

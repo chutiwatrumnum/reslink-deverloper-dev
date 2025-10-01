@@ -65,14 +65,20 @@ const UnauthorizedLayout = () => {
           alignItems: "center",
           height: "100vh",
           backgroundColor: "#f5f5f5",
-        }}>
+        }}
+      >
         Loading...
       </div>
     );
   }
 
   // ถ้าเป็นหน้า auth ให้แสดง outlet ตรงๆ
-  if (location.pathname === "/auth") {
+  if (
+    location.pathname === "/auth" ||
+    location.pathname === "/recovery" ||
+    location.pathname.startsWith("/forgot-password") ||
+    location.pathname === "/success-reset"
+  ) {
     return <>{outlet}</>;
   }
 

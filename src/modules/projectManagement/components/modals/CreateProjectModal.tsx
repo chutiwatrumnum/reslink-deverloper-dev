@@ -97,8 +97,6 @@ type stepsType = {
   content: ReactNode;
 };
 
-const DEFAULT_CENTER = { lat: 13.736717, lng: 100.523186 };
-
 const CreateProjectModal = ({
   isCreateModalOpen,
   onCancel,
@@ -136,7 +134,7 @@ const CreateProjectModal = ({
   const { data: featureAndBankPreview } = usePreviewFeatureByLicenseIdQuery(
     licenseId!
   );
-  console.log(featureAndBankPreview);
+  // console.log(featureAndBankPreview);
 
   // Bank info data in step 3
   const bankName = featureAndBankPreview?.bank?.bankName || "";
@@ -211,30 +209,21 @@ const CreateProjectModal = ({
   };
 
   // ===== Map: no-flicker setup =====
-  const mapCoordsRef = useRef<{ lat: number; lng: number }>(DEFAULT_CENTER);
-  const initialCenterRef = useRef(DEFAULT_CENTER);
-  const [hasPickedLocation, setHasPickedLocation] = useState(false);
+  const mapCoordsRef = useRef<{ lat: number; lng: number }>();
+  const hasPickedLocationRef = useRef<boolean>(false);
 
-  const handleLocationChange = useCallback(
-    (lat: number, lng: number) => {
-      mapCoordsRef.current = { lat, lng };
-      if (
-        !hasPickedLocation &&
-        (lat !== DEFAULT_CENTER.lat || lng !== DEFAULT_CENTER.lng)
-      ) {
-        setHasPickedLocation(true);
-      }
-    },
-    [hasPickedLocation]
-  );
+  const handleLocationChange = useCallback((lat: number, lng: number) => {
+    mapCoordsRef.current = { lat, lng };
+    if (!hasPickedLocationRef.current) {
+      hasPickedLocationRef.current = true;
+    }
+  }, []);
 
   // สร้าง MapElement แค่ครั้งเดียว (ไม่ re-mount เมื่อ state อื่นเปลี่ยน)
   const MapElement = useMemo(
     () => (
       <GoogleMapComponent
         onLocationChange={handleLocationChange}
-        initialLat={initialCenterRef.current.lat}
-        initialLng={initialCenterRef.current.lng}
         height={470}
         width="100%"
         zoom={12}
@@ -429,11 +418,8 @@ const CreateProjectModal = ({
   const onFinishProject = async (values: ProjectManagementCreatePayload) => {
     try {
       if (!projectId) {
-        const { lat, lng } = mapCoordsRef.current;
-        if (
-          !hasPickedLocation ||
-          (lat === DEFAULT_CENTER.lat && lng === DEFAULT_CENTER.lng)
-        ) {
+        const { lat, lng } = mapCoordsRef.current ?? {};
+        if (!hasPickedLocationRef.current || !lat || !lng) {
           message.error("Please select a location on the map");
           return;
         }
@@ -560,8 +546,7 @@ const CreateProjectModal = ({
     }
     if (isCreateModalOpen && initialStep === 1) {
       setCheckedFeatureValues([]);
-      mapCoordsRef.current = DEFAULT_CENTER;
-      setHasPickedLocation(false);
+      hasPickedLocationRef.current = false;
     }
   }, [isCreateModalOpen, initialStep, useProjectId, useLicenseId]);
 
@@ -887,12 +872,8 @@ const CreateProjectModal = ({
                 rules={[
                   {
                     validator: () => {
-                      const { lat, lng } = mapCoordsRef.current;
-                      if (
-                        !hasPickedLocation ||
-                        (lat === DEFAULT_CENTER.lat &&
-                          lng === DEFAULT_CENTER.lng)
-                      ) {
+                      const { lat, lng } = mapCoordsRef.current ?? {};
+                      if (!hasPickedLocationRef.current || !lat || !lng) {
                         return Promise.reject(
                           "Please select a location on the map"
                         );
@@ -903,18 +884,6 @@ const CreateProjectModal = ({
                 ]}
               >
                 {MapElement}
-                {hasPickedLocation && (
-                  <div
-                    style={{
-                      marginTop: 12,
-                      fontSize: 12,
-                      color: "#333",
-                    }}
-                  >
-                    Selected: {mapCoordsRef.current.lat.toFixed(6)},{" "}
-                    {mapCoordsRef.current.lng.toFixed(6)}
-                  </div>
-                )}
               </Form.Item>
             </Col>
           </Row>
@@ -1378,8 +1347,8 @@ const CreateProjectModal = ({
             packageForm.resetFields();
             payForm.resetFields();
             setCheckedFeatureValues([]);
-            mapCoordsRef.current = DEFAULT_CENTER;
-            setHasPickedLocation(false);
+            mapCoordsRef.current = undefined;
+            hasPickedLocationRef.current = false;
           }}
         >
           Go to dashboard
@@ -1428,8 +1397,8 @@ const CreateProjectModal = ({
     setProjectId(null);
     setLicenseId(null);
     setIsSuccessPayment(false);
-    mapCoordsRef.current = DEFAULT_CENTER;
-    setHasPickedLocation(false);
+    mapCoordsRef.current = undefined;
+    hasPickedLocationRef.current = false;
     onCancel();
     onRefresh();
   };
@@ -1445,8 +1414,8 @@ const CreateProjectModal = ({
         projectForm.resetFields();
         setIsSuccessPayment(false);
         setLicenseId(null);
-        mapCoordsRef.current = DEFAULT_CENTER;
-        setHasPickedLocation(false);
+        mapCoordsRef.current = undefined;
+        hasPickedLocationRef.current = false;
         onModalClose();
         onRefresh();
         onCancel();
@@ -1470,8 +1439,8 @@ const CreateProjectModal = ({
 
         setIsSuccessPayment(false);
 
-        mapCoordsRef.current = DEFAULT_CENTER;
-        setHasPickedLocation(false);
+        mapCoordsRef.current = undefined;
+        hasPickedLocationRef.current = false;
 
         setCheckedFeatureValues([]);
         setCheckedStandardValues([]);
@@ -1504,8 +1473,8 @@ const CreateProjectModal = ({
         setIsSuccessPayment(false);
         setPreviewProofPayment("");
 
-        mapCoordsRef.current = DEFAULT_CENTER;
-        setHasPickedLocation(false);
+        mapCoordsRef.current = undefined;
+        hasPickedLocationRef.current = false;
 
         // Reset step to 1 for next modal opening
         setCurrentStep(1);

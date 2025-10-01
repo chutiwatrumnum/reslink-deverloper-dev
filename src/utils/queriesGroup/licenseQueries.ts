@@ -78,7 +78,7 @@ const getLicenseList = async ({
             orderNo: item.orderNo,
             createdAt: item.createdAt,
             // เพิ่ม display fields สำหรับ UI
-            packageName: "Standard" as const, // ตั้งค่า default หรือดึงจาก API ถ้ามี
+            packageName: item.package, // ตั้งค่า default หรือดึงจาก API ถ้ามี
             buyingDate: buyingDate,
             status: licenseStatus,
           };

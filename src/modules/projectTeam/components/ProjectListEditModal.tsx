@@ -58,11 +58,10 @@ const ProjectListEditModal = ({
         // console.log(value);
         editMember
           .mutateAsync({ userId: data?.userId ?? "", payload: value })
-          .then((res) => {
-            console.log(res);
+          .then(() => {
+            onOk();
+            onRefresh();
           });
-        onOk();
-        onRefresh();
       },
     });
   };

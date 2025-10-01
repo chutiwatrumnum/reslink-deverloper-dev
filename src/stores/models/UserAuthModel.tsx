@@ -139,7 +139,10 @@ export const userAuth = createModel<RootModel>()({
 
     async recoveryByEmail(payload: { email: string }) {
       try {
-        const result = await axios.post("/users/forgot-password", payload);
+        const result = await axios.post(
+          "/auth/developer/forgot-password",
+          payload
+        );
         if (result.status >= 400) {
           FailedModal(result.data.message);
           return;
@@ -152,7 +155,10 @@ export const userAuth = createModel<RootModel>()({
 
     async resetPassword(payload: ResetPasswordPayloadType) {
       try {
-        const result = await axios.put("/users/forgot-password", payload);
+        const result = await axios.put(
+          "/auth/developer/forgot-password",
+          payload
+        );
         if (result.status >= 400) {
           message.error(result.data.message);
           return false;

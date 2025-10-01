@@ -7,6 +7,7 @@ import { developerTeam } from "./DeveloperTeamModel";
 import { projectManagement } from "./ProjectManagementModel";
 import { developerNews } from "./DeveloperNewsModel";
 import { license } from "./LicenseModel";
+import { paymentHistory } from "./PaymentHistoryModel";
 
 export interface RootModel extends Models<RootModel> {
   announcement: typeof announcement;
@@ -17,6 +18,7 @@ export interface RootModel extends Models<RootModel> {
   projectManagement: typeof projectManagement;
   developerNews: typeof developerNews;
   license: typeof license;
+  paymentHistory: typeof paymentHistory 
 }
 
 export const models: RootModel = {
@@ -27,5 +29,6 @@ export const models: RootModel = {
   developerTeam,
   projectManagement,
   developerNews,
-  license
+  license,
+  paymentHistory
 };

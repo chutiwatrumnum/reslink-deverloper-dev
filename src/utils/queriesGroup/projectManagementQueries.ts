@@ -8,13 +8,12 @@ import {
 // Get all projects
 const getProject = async ({
   queryKey,
-}: QueryFunctionContext<[string, boolean, number, string?]>) => {
-  const [_key, active, curPage, search] = queryKey;
-  const statusId = 99
+}: QueryFunctionContext<[string, boolean, number, number, string?]>) => {
+  const [_key, active, curPage, perPage, search] = queryKey;
 
   const params = new URLSearchParams();
   params.append("curPage", curPage.toString());
-  params.append("perPage", "10");
+  params.append("perPage", perPage.toString());
   if (active) {
     params.append("status", "99");
   } else {
@@ -26,6 +25,7 @@ const getProject = async ({
 
   const url = `/project/developer/dashboard?${params.toString()}`;
   const res = await axios.get(url);
+  // console.log("📊 Project management raw data list: ", res)
 
   if (res.data?.result) {
     return {
@@ -38,12 +38,12 @@ const getProject = async ({
 };
 
 export const useProjectManagementQuery = (
-  params: { active: boolean; curPage: number; search?: string }
+  params: { active: boolean; curPage: number; perPage:number; search?: string }
 ) => {
-  const { active, curPage, search } = params;
+  const { active, curPage, perPage,search } = params;
 
   return useQuery({
-    queryKey: ["projectManagement", active, curPage, search],
+    queryKey: ["projectManagement", active, curPage, perPage, search],
     queryFn: getProject,
     enabled: !!params,
     retry: 2,

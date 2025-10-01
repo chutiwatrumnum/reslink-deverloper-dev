@@ -21,10 +21,14 @@ import ProjectLists from "./modules/projectTeam/screens/ProjectLists";
 import ProjectManagement from "./modules/projectManagement/screens/ProjectManagement";
 import LicenseManagement from "./modules/licenseManagement/screens/LicenseManagement";
 import DeveloperNews from "./modules/developerNews/screens/DeveloperNews";
-import Profile from './modules/setting/screens/Profile';
+import Profile from "./modules/setting/screens/Profile";
 
 // unauthorized routes
 import SignInScreen from "./modules/main/SignInScreen";
+import RecoveryScreen from "./modules/main/RecoveryScreen";
+import ResetPassword from "./modules/main/ResetPassword";
+import SuccessResetScreen from "./modules/main/SuccessResetScreen";
+import PaymentHistory from "./modules/licenseManagement/screens/PaymentHistory";
 
 // components
 
@@ -34,8 +38,11 @@ function App() {
       <Routes>
         {/* old legacy routes */}
         {/* unauthorized_route */}
-        <Route path="auth" element={<UnauthorizedLayout />}>
-          <Route index element={<SignInScreen />} />
+        <Route element={<UnauthorizedLayout />}>
+          <Route path="auth" index element={<SignInScreen />} />
+          <Route path="recovery" element={<RecoveryScreen />} />
+          <Route path="forgot-password" element={<ResetPassword />} />
+          <Route path="success-reset" element={<SuccessResetScreen />} />
         </Route>
 
         {/* authorized_route */}
@@ -87,6 +94,7 @@ function App() {
                   <Route path="developerNews" element={<DeveloperNews />} />
                   {/* License Manage */}
                   <Route path="license" element={<LicenseManagement />} />
+                  <Route path="paymentHistory" element={<PaymentHistory />} />
                   {/* Profile */}
                   <Route path="profile" element={<Profile />} />
                 </Route>
