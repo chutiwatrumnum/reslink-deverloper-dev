@@ -1,5 +1,6 @@
 // src/modules/licenseManagement/screens/LicenseManagement.tsx - อัปเดตให้ส่ง projectId แทน id
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 // Components
 import Header from "../../../components/templates/Header";
@@ -25,6 +26,9 @@ import type {
 } from "../../../stores/interfaces/License";
 
 const LicenseManagement = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchValue, setSearchValue] = useState<string>("");
+
   // ใช้แค่ local state เพื่อหลีกเลี่ยงการทำงานซ้ำซ้อนกับ Redux
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -56,8 +60,10 @@ const LicenseManagement = () => {
 
   // Event handlers
   const handleSearch = (value: string) => {
-    setSearch(value.trim());
-    setCurrentPage(1); // Reset to first page
+    const trimmedValue = value.trim();
+    setSearchValue(trimmedValue);
+    setSearch(trimmedValue);
+    setCurrentPage(1);
   };
 
   const handlePaymentStatusChange = (value: string) => {
@@ -93,6 +99,7 @@ const LicenseManagement = () => {
     setIsSelectPackageModalOpen(false);
     setSelectedProjectId(undefined);
     setCurrentPackageStep(1);
+    handleRefresh();
   };
 
   // License actions
@@ -114,9 +121,21 @@ const LicenseManagement = () => {
       setIsSelectPackageModalOpen(true);
     }
   };
+
   const handleNextStep = () => {
     setCurrentPackageStep(currentPackageStep + 1);
   };
+
+  // for search project name in project management page (info modal => button check license)
+  useEffect(() => {
+    const searchParam = searchParams.get("search");
+    if (searchParam) {
+      setSearchValue(searchParam);
+      setSearch(searchParam);
+      setCurrentPage(1);
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   // Table columns
   const columns: ColumnsType<LicenseItem> = [
@@ -203,11 +222,13 @@ const LicenseManagement = () => {
             placeholder="Search by project name"
             allowClear
             onSearch={handleSearch}
+            onChange={(e) => setSearchValue(e.target.value)}
+            value={searchValue}
             style={{ width: "100%" }}
             size="large"
           />
         </Col>
-        <Col xs={24} md={6} lg={5}>
+        {/* <Col xs={24} md={6} lg={5}>
           <Select
             placeholder="Payment Status"
             options={paymentStatusOptions}
@@ -216,8 +237,8 @@ const LicenseManagement = () => {
             size="large"
             allowClear
           />
-        </Col>
-        <Col>
+        </Col> */}
+        {/* <Col>
           <Button
             icon={<ReloadOutlined />}
             onClick={handleRefresh}
@@ -226,7 +247,7 @@ const LicenseManagement = () => {
           >
             Refresh
           </Button>
-        </Col>
+        </Col> */}
         <Col flex="auto" />
         <Col xs={24} md={8} lg={6}>
           <Button

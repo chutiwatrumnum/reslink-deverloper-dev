@@ -52,7 +52,7 @@ import {
   ProvinceDataTypes,
   DistrictDataTypes,
 } from "../../../../stores/interfaces/ProjectManage";
-import type { RadioChangeEvent } from "antd";
+import type { RadioChangeEvent, CheckboxProps } from "antd";
 
 //Image
 import successPaymentImage from "../../../../assets/images/success-payment.png";
@@ -113,6 +113,14 @@ const CreateProjectModal = ({
   const [open, setOpen] = useState<boolean>(false);
   const [previewProofPayment, setPreviewProofPayment] = useState("");
 
+  // Trial package state
+  const [isTrial, setIsTrial] = useState("");
+  const [trialChecked, setTrialChecked] = useState(false);
+
+  const onTrial: CheckboxProps["onChange"] = (e) => {
+    setTrialChecked(e.target.checked);
+  };
+
   // 🔁 Mutation
   const createProject = postCreateProjectManagementMutation();
   const createPackageInvoice = postCreatePackageInvoiceMutation();
@@ -134,7 +142,6 @@ const CreateProjectModal = ({
   const { data: featureAndBankPreview } = usePreviewFeatureByLicenseIdQuery(
     licenseId!
   );
-  // console.log(featureAndBankPreview);
 
   // Bank info data in step 3
   const bankName = featureAndBankPreview?.bank?.bankName || "";
@@ -393,24 +400,24 @@ const CreateProjectModal = ({
     setOptionsSubDistrict([]);
   };
 
-  const onSelectSubDistrict = (value: string) => {
-    setSubDistrictValue(value);
-    const selectedSubDistrict = allSubDistrict.find(
-      (sd) => sd.name_en === value
-    );
-    const subDistrictId = selectedSubDistrict?.id;
-    const zipCode = selectedSubDistrict?.zip_code;
+  // const onSelectSubDistrict = (value: string) => {
+  //   setSubDistrictValue(value);
+  //   const selectedSubDistrict = allSubDistrict.find(
+  //     (sd) => sd.name_en === value
+  //   );
+  //   const subDistrictId = selectedSubDistrict?.id;
+  //   const zipCode = selectedSubDistrict?.zip_code;
 
-    setPostalCodeValue(zipCode);
+  //   setPostalCodeValue(zipCode);
 
-    projectForm.setFieldsValue({
-      zipCode: zipCode?.toString(),
-    });
+  //   projectForm.setFieldsValue({
+  //     zipCode: zipCode?.toString(),
+  //   });
 
-    console.log("Sub-District Name: ", value);
-    console.log("Sub-District ID: ", subDistrictId);
-    console.log("Zip Code: ", zipCode);
-  };
+  //   console.log("Sub-District Name: ", value);
+  //   console.log("Sub-District ID: ", subDistrictId);
+  //   console.log("Zip Code: ", zipCode);
+  // };
 
   // ===== Loading ระหว่าง Save =====
   const [savingProject, setSavingProject] = useState(false);
@@ -438,7 +445,7 @@ const CreateProjectModal = ({
         const response = await createProject.mutateAsync(payload);
         const projectId = response.data.result?.id;
         setProjectId(projectId);
-        console.log("Project ID:", projectId);
+        // console.log("Project ID:", projectId);
       }
 
       setCurrentStep(2);
@@ -523,7 +530,7 @@ const CreateProjectModal = ({
 
       console.log("Payment payload:", payload);
       const response = await updatePayment.mutate({ id: licenseId, payload });
-      console.log("Payment update response:", response);
+      // console.log("Payment update response:", response);
       setIsSuccessPayment(true);
     } catch (error) {
       console.error("Error saving pay form:", error);
@@ -554,21 +561,16 @@ const CreateProjectModal = ({
   const handleOptionalChange = (values: string[]) => {
     // Get all optional features
     const optionalFeatures = featuresData?.optional || [];
-
     // Filter children that have a parent bundle
     const filteredValues = values.filter((id: string) => {
       const feature = optionalFeatures.find((f: any) => f.id === id);
-
       if (!feature) return true;
-
       // Find parents of this feature (if it's a child)
       const parentBundles = optionalFeatures.flatMap(
         (f: any) =>
           f.featureBundles?.filter((b: any) => b.bundleFeaturesId === id) || []
       );
-
       const requiredParents = parentBundles.map((b: any) => b.featuresId);
-
       // Keep if no parent required OR at least one parent is checked
       return (
         requiredParents.length === 0 ||
@@ -929,9 +931,6 @@ const CreateProjectModal = ({
       return (
         <div style={{ textAlign: "center", padding: "50px" }}>
           <Spin size="large" />
-          <div style={{ marginTop: 16 }}>
-            Loading existing package selection...
-          </div>
         </div>
       );
     }
@@ -1077,7 +1076,7 @@ const CreateProjectModal = ({
                             return (
                               <Col span={12} key={index}>
                                 <Checkbox
-                                  value={String(item.id)} // Ensure String conversion
+                                  value={String(item.id)}
                                   className="packageBoxCustom"
                                   disabled={!isParentChecked}
                                   style={{
@@ -1128,6 +1127,41 @@ const CreateProjectModal = ({
             </Row>
           </Col>
           <Col span={10}>
+            {/* Free trial card */}
+            <Row style={{ marginBottom: 12 }}>
+              <Col span={24}>
+                <Card className="trialCard">
+                  <Typography.Title
+                    level={4}
+                    style={{ color: "var(--primary-color)" }}
+                  >
+                    Start free Trial
+                  </Typography.Title>
+                  <Divider />
+                  <Typography.Text type="secondary">
+                    Experience the complete package at no cost. Explore both
+                    standard features and optional add-ons before committing.
+                  </Typography.Text>
+                  <Row style={{ marginTop: 24 }}>
+                    <Col span={24}>
+                      <Checkbox
+                        value="isTrial"
+                        checked={trialChecked}
+                        onChange={onTrial}
+                        style={{
+                          border: `1px solid ${
+                            trialChecked ? "var(--secondary-color)" : "#EBEBEB"
+                          }`,
+                        }}
+                        className="trialCheckboxCustom"
+                      >
+                        Start free trial
+                      </Checkbox>
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+            </Row>
             <Row>
               <Col span={24}>
                 {/* Preview Summary Card */}
@@ -1138,6 +1172,7 @@ const CreateProjectModal = ({
                   standardPackage={featuresData?.standard || []}
                   optionalFeature={featuresData?.optional || []}
                   licenseId={licenseId}
+                  isTrial={trialChecked}
                 />
               </Col>
             </Row>
@@ -1261,6 +1296,7 @@ const CreateProjectModal = ({
               standardPackage={featuresData?.standard || []}
               optionalFeature={featuresData?.optional || []}
               licenseId={licenseId}
+              isTrial={trialChecked}
             />
           </Col>
         </Row>

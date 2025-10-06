@@ -4,7 +4,8 @@ import { callConfirmModal } from "../../../components/common/Modal";
 import { Row, Col, Input, Button, Table } from "antd";
 import dayjs from "dayjs";
 // Icons
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined } from "@ant-design/icons";
+import { TrashIcon } from "../../../assets/icons/Icons";
 
 // APIs
 import { useProjectTeamManagementListQuery } from "../../../utils/queriesGroup/projectTeamQueries";
@@ -157,14 +158,18 @@ const ProjectLists = () => {
       align: "center",
       fixed: "right",
       render: (_, record) => (
-        <Row justify={"center"}>
+        <Row justify={"center"} style={{ gap: 8 }}>
           <Col>
             <Button
               onClick={() => {
                 onEdit(record);
               }}
               type="text"
-              icon={<EditOutlined style={{ fontSize: 20, color: "#403d38" }} />}
+              icon={
+                <EditOutlined
+                  style={{ fontSize: 24, color: "var(--icon-color)" }}
+                />
+              }
             />
           </Col>
           <Col>
@@ -173,9 +178,7 @@ const ProjectLists = () => {
                 showDeleteConfirm(record);
               }}
               type="text"
-              icon={
-                <DeleteOutlined style={{ fontSize: 20, color: "#403d38" }} />
-              }
+              icon={<TrashIcon color="var(--icon-color)" />}
             />
           </Col>
         </Row>

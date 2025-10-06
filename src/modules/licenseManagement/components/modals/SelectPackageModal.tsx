@@ -85,7 +85,6 @@ const SelectPackageModal = ({
   const { data: featureAndBankPreview } = useFeaturesAndProjectByIdQuery(
     licenseId!
   );
-  console.log(featureAndBankPreview);
 
   // Derived data
   const { Text } = Typography;

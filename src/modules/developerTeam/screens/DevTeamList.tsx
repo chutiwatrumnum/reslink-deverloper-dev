@@ -19,7 +19,8 @@ import { getDeveloperTeamListQuery } from "../../../utils/queriesGroup/developer
 import { useDeleteDeveloperTeamMutation } from "../../../utils/mutationsGroup/developerTeamMutations";
 
 // Icons
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined } from "@ant-design/icons";
+import { TrashIcon } from "../../../assets/icons/Icons";
 
 // Types
 import type { ColumnsType } from "antd/es/table";
@@ -242,7 +243,7 @@ const DevTeamList = () => {
                 className="iconButton"
                 type="text"
                 size="large"
-                icon={<EditOutlined />}
+                icon={<EditOutlined style={{ fontSize: 24 }} />}
                 onClick={() => onEdit(record)}
               />
             </Col>
@@ -251,7 +252,7 @@ const DevTeamList = () => {
                 className="iconButton"
                 type="text"
                 size="large"
-                icon={<DeleteOutlined />}
+                icon={<TrashIcon color="var(--icon-color)" />}
                 onClick={() => showDeleteConfirm(record)}
                 loading={
                   deleteMutation.isPending &&

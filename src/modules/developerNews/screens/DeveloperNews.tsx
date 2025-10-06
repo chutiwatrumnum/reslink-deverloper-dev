@@ -22,11 +22,8 @@ import {
 } from "../../../utils/mutationsGroup/developerNewsMutations";
 
 // Icons
-import {
-  EditOutlined,
-  DeleteOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { TrashIcon } from "../../../assets/icons/Icons";
 
 // Types
 import type { ColumnsType } from "antd/es/table";
@@ -189,30 +186,30 @@ const DeveloperNews = () => {
   };
 
   // Get status tag with time validation (cleaned version)
- const getStatusTag = (record: DeveloperNewsType) => {
-     const now = dayjs();
-     const startDateTime = record.startTime
-       ? dayjs(`${record.startDate} ${record.startTime}`, "YYYY-MM-DD HH:mm")
-       : dayjs(record.startDate);
+  const getStatusTag = (record: DeveloperNewsType) => {
+    const now = dayjs();
+    const startDateTime = record.startTime
+      ? dayjs(`${record.startDate} ${record.startTime}`, "YYYY-MM-DD HH:mm")
+      : dayjs(record.startDate);
 
-     const endDateTime = record.endTime
-       ? dayjs(`${record.endDate} ${record.endTime}`, "YYYY-MM-DD HH:mm")
-       : dayjs(record.endDate).endOf("day"); // ถ้าไม่มี endTime ให้เป็น 23:59:59
+    const endDateTime = record.endTime
+      ? dayjs(`${record.endDate} ${record.endTime}`, "YYYY-MM-DD HH:mm")
+      : dayjs(record.endDate).endOf("day"); // ถ้าไม่มี endTime ให้เป็น 23:59:59
 
-     if (!record.active || !record.isPublish) {
-       return <Tag color="red">Inactive</Tag>;
-     }
+    if (!record.active || !record.isPublish) {
+      return <Tag color="red">Inactive</Tag>;
+    }
 
-     if (now.isBefore(startDateTime)) {
-       return <Tag color="blue">Scheduled</Tag>;
-     }
+    if (now.isBefore(startDateTime)) {
+      return <Tag color="blue">Scheduled</Tag>;
+    }
 
-     if (now.isAfter(endDateTime)) {
-       return <Tag color="gray">Expired</Tag>;
-     }
+    if (now.isAfter(endDateTime)) {
+      return <Tag color="gray">Expired</Tag>;
+    }
 
-     return <Tag color="green">Activated</Tag>;
-   };
+    return <Tag color="green">Activated</Tag>;
+  };
 
   // Get creator name (cleaned version)
   const getCreatorName = (record: DeveloperNewsType) => {
@@ -271,7 +268,8 @@ const DeveloperNews = () => {
                 color: "#bbb",
                 fontSize: 12,
                 border: "1px solid #f0f0f0",
-              }}>
+              }}
+            >
               No Image
             </div>
           )}
@@ -289,7 +287,8 @@ const DeveloperNews = () => {
             fontWeight: 500,
             marginBottom: 4,
             lineHeight: "1.4",
-          }}>
+          }}
+        >
           {record.title || "-"}
         </div>
       ),
@@ -350,14 +349,18 @@ const DeveloperNews = () => {
       align: "center",
       width: 120,
       render: (_, record) => (
-        <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
           <Button
             type="text"
             size="small"
             onClick={() => showDetailModal(record)}
-            icon={
-              <InfoCircleOutlined style={{ fontSize: 16, color: "#666" }} />
-            }
+            icon={<InfoCircleOutlined style={{ fontSize: 24 }} />}
             title="View Details"
             style={{
               padding: "4px 8px",
@@ -369,7 +372,7 @@ const DeveloperNews = () => {
             type="text"
             size="small"
             onClick={() => onEdit(record)}
-            icon={<EditOutlined style={{ fontSize: 16, color: "#666" }} />}
+            icon={<EditOutlined style={{ fontSize: 24 }} />}
             title="Edit"
             style={{
               padding: "4px 8px",
@@ -385,7 +388,7 @@ const DeveloperNews = () => {
               deleteMutation.isPending &&
               deleteMutation.variables === record.id?.toString()
             }
-            icon={<DeleteOutlined style={{ fontSize: 16, color: "#666" }} />}
+            icon={<TrashIcon color="var(--icon-color)" className="trashIcon" />}
             title="Delete"
             style={{
               padding: "4px 8px",
@@ -440,7 +443,8 @@ const DeveloperNews = () => {
               backgroundColor: "#002c55",
               borderColor: "#002c55",
             }}
-            loading={createMutation.isPending}>
+            loading={createMutation.isPending}
+          >
             Add News
           </Button>
         </Col>

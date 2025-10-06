@@ -45,6 +45,8 @@ const getLicenseList = async ({
     if (params.endDate) {
       queryParams.append("endDate", params.endDate);
     }
+    queryParams.append("sort", "DESC");
+    queryParams.append("sortBy", "license.orderNo");
 
     const url = `/license/dashboard?${queryParams.toString()}`;
     // console.log("🔍 License API Call: GET", url);

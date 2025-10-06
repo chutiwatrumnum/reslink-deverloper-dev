@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 // Components
 import Header from "../../../components/templates/Header";
 import {
@@ -52,6 +53,7 @@ import { useDeleteProjectManagementMutation } from "../../../utils/mutationsGrou
 import "../styles/projectManagement.css";
 
 const ProjectManagement = () => {
+  const navigate = useNavigate();
   const [curPage, setCurPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -109,7 +111,7 @@ const ProjectManagement = () => {
   // Search
   const { Search } = Input;
   const onSearch = (value: string) => {
-    setSearch(value);
+    setSearch(value.trim());
     setCurPage(1);
   };
 
@@ -277,6 +279,7 @@ const ProjectManagement = () => {
       key: "image",
       dataIndex: "image",
       align: "center",
+      width: "15%",
       render: (_, record) => (
         <>
           {!record?.image ? (
@@ -578,6 +581,7 @@ const ProjectManagement = () => {
       key: "image",
       dataIndex: "image",
       align: "center",
+      width: "15%",
       render: (_, record) => (
         <>
           {!record?.image ? (
@@ -890,74 +894,131 @@ const ProjectManagement = () => {
     return bStart - aStart;
   });
 
-  // STEP 2: Pick current + previous
   const currentLicense = sortedLicenses[0];
-  const previousLicenses = sortedLicenses.slice(1);
+  // const previousLicenses = sortedLicenses.slice(1);
 
+  //📍 Collapse version (Render standard and optional features)
+  // const renderFeatures = (license: any) => {
+  //   return (
+  //     <Space direction="vertical" style={{ width: "100%" }}>
+  //       {/* Standard features */}
+  //       {license?.features?.standard && (
+  //         <Collapse
+  //           style={{ borderRadius: 10 }}
+  //           items={[
+  //             {
+  //               key: "1",
+  //               label: `Standard (License period: ${license.features.standard.period})`,
+  //               children: (
+  //                 <Row gutter={[8, 8]}>
+  //                   {license.features.standard.features?.map(
+  //                     (feature: any, index: number) => (
+  //                       <Col span={8} key={index}>
+  //                         <Flex gap={8} align="start">
+  //                           <CheckCircleFilled
+  //                             style={{ color: "var(--success-color)" }}
+  //                           />
+  //                           <Text style={{ margin: 0, fontSize: 12 }}>
+  //                             {feature.feature.name}
+  //                           </Text>
+  //                         </Flex>
+  //                       </Col>
+  //                     )
+  //                   )}
+  //                 </Row>
+  //               ),
+  //             },
+  //           ]}
+  //         />
+  //       )}
+
+  //       {/* Optional features */}
+  //       {license?.features?.optional?.features?.length > 0 && (
+  //         <Collapse
+  //           style={{ borderRadius: 10 }}
+  //           key={license.licenseId}
+  //           items={[
+  //             {
+  //               key: "optional",
+  //               label: `Optional (License period: ${license.features.optional.period})`,
+  //               children: (
+  //                 <Row gutter={[8, 8]}>
+  //                   {license.features.optional.features.map(
+  //                     (feature, idx: number) => (
+  //                       <Col span={8} key={idx}>
+  //                         <Flex gap={8} align="start">
+  //                           <CheckCircleFilled
+  //                             style={{ color: "var(--success-color)" }}
+  //                           />
+  //                           <Text style={{ margin: 0, fontSize: 12 }}>
+  //                             {feature.feature.name}
+  //                           </Text>
+  //                         </Flex>
+  //                       </Col>
+  //                     )
+  //                   )}
+  //                 </Row>
+  //               ),
+  //             },
+  //           ]}
+  //         />
+  //       )}
+  //     </Space>
+  //   );
+  // };
+
+  // 📦 Box version (Render standard and optional features)
   const renderFeatures = (license: any) => {
     return (
-      <Space direction="vertical" style={{ width: "100%" }}>
+      <Space size="middle" direction="vertical" style={{ width: "100%" }}>
         {/* Standard features */}
         {license?.features?.standard && (
-          <Collapse
-            style={{ borderRadius: 10 }}
-            items={[
-              {
-                key: "1",
-                label: `Standard (License period: ${license.features.standard.period})`,
-                children: (
-                  <Row gutter={[8, 8]}>
-                    {license.features.standard.features?.map(
-                      (feature: any, index: number) => (
-                        <Col span={8} key={index}>
-                          <Flex gap={8} align="start">
-                            <CheckCircleFilled
-                              style={{ color: "var(--success-color)" }}
-                            />
-                            <Text style={{ margin: 0, fontSize: 12 }}>
-                              {feature.feature.name}
-                            </Text>
-                          </Flex>
-                        </Col>
-                      )
-                    )}
-                  </Row>
-                ),
-              },
-            ]}
-          />
+          <Flex vertical={true} gap={6}>
+            <Text style={{ marginBottom: 6 }} strong>
+              Standard
+            </Text>
+            <Row gutter={[10, 10]}>
+              {license.features.standard.features?.map(
+                (feature: any, index: number) => (
+                  <Col span={8} key={index}>
+                    <Flex gap={8} align="start">
+                      <CheckCircleFilled
+                        style={{ color: "var(--success-color)" }}
+                      />
+                      <Text style={{ margin: 0, fontSize: 12 }}>
+                        {feature.feature.name}
+                      </Text>
+                    </Flex>
+                  </Col>
+                )
+              )}
+            </Row>
+          </Flex>
         )}
 
         {/* Optional features */}
         {license?.features?.optional?.features?.length > 0 && (
-          <Collapse
-            style={{ borderRadius: 10 }}
-            key={license.licenseId}
-            items={[
-              {
-                key: "optional",
-                label: `Optional (License period: ${license.features.optional.period})`,
-                children: (
-                  <Row gutter={[8, 8]}>
-                    {license.features.optional.features.map(
-                      (feature, idx: number) => (
-                        <Col span={8} key={idx}>
-                          <Flex gap={8} align="start">
-                            <CheckCircleFilled
-                              style={{ color: "var(--success-color)" }}
-                            />
-                            <Text style={{ margin: 0, fontSize: 12 }}>
-                              {feature.feature.name}
-                            </Text>
-                          </Flex>
-                        </Col>
-                      )
-                    )}
-                  </Row>
-                ),
-              },
-            ]}
-          />
+          <Flex vertical={true} gap={6}>
+            <Text style={{ marginBottom: 6 }} strong>
+              Optional
+            </Text>
+            <Row gutter={[10, 10]}>
+              {license.features.optional.features.map(
+                (feature, idx: number) => (
+                  <Col span={8} key={idx}>
+                    <Flex gap={8} align="start">
+                      <CheckCircleFilled
+                        style={{ color: "var(--success-color)" }}
+                      />
+                      <Text style={{ margin: 0, fontSize: 12 }}>
+                        {feature.feature.name}
+                      </Text>
+                    </Flex>
+                  </Col>
+                )
+              )}
+            </Row>
+          </Flex>
         )}
       </Space>
     );
@@ -1044,17 +1105,13 @@ const ProjectManagement = () => {
         title="Information"
         footer={false}
         centered={true}
-        style={{
-          maxHeight: "90vh",
-        }}
         className="infoModal"
       >
         {selectedRecord && (
           <div
             style={{
-              maxHeight: "75vh",
-              overflowY: "auto",
               overflowX: "hidden",
+              height: "60dvh",
             }}
           >
             <Row gutter={24} style={{ marginTop: 24 }}>
@@ -1135,6 +1192,7 @@ const ProjectManagement = () => {
                     border: "1px solid #C6C8C9",
                     borderRadius: 16,
                     padding: 12,
+                    height: "100%",
                   }}
                 >
                   <Col span={24}>
@@ -1185,7 +1243,7 @@ const ProjectManagement = () => {
                                 )
                               }
                               style={{
-                                border: `1px solid var(--secondary-color)`,
+                                border: `2px solid var(--secondary-color)`,
                                 fontSize: 12,
                                 padding: "4px 8px",
                               }}
@@ -1213,7 +1271,12 @@ const ProjectManagement = () => {
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
                           <Text strong>Status</Text>
-                          <Text style={{ color: statusStyle.color }}>
+                          <Text
+                            style={{
+                              color: statusStyle.color,
+                              fontWeight: 600,
+                            }}
+                          >
                             {statusStyle.text}
                           </Text>
                         </Flex>
@@ -1253,7 +1316,7 @@ const ProjectManagement = () => {
               {/* Standard package and Optional feature preview */}
               <Col span={11}>
                 <Flex vertical={true} style={{ marginBottom: 6 }}>
-                  <Text strong>Package information</Text>
+                  <Text strong>Features available</Text>
                 </Flex>
                 {infoLoading ? (
                   <Spin tip="loading">
@@ -1279,79 +1342,114 @@ const ProjectManagement = () => {
                     <Empty />
                   </Flex>
                 ) : (
-                  <div
+                  <Flex
                     style={{
                       border: "1px solid #C6C8C9",
                       borderRadius: 16,
-                      padding: 14,
+                      padding: 12,
+                      height: "100%",
                     }}
+                    vertical={true}
+                    justify="space-between"
                   >
-                    {/* Current license */}
-                    {infoLoading ? (
-                      <></>
-                    ) : (
-                      <Flex vertical={true} style={{ marginBottom: 6 }}>
-                        <Flex gap={4}>
-                          {/* <CheckCircleFilled
-                            style={{ color: "var(--success-color)" }}
-                          /> */}
-                          <Text strong>Order no: {currentLicense.orderNo}</Text>
-                        </Flex>
-                        <Text style={{ fontWeight: 500 }}>
-                          {currentLicense?.features?.standard
-                            ? `Standard + `
-                            : ""}
-                          {currentLicense?.optionalFeatureLength || 0} optional
-                          features
-                        </Text>
-                      </Flex>
-                    )}
-                    {renderFeatures(currentLicense)}
-                    {/* Previous Packages */}
-                    {previousLicenses.length > 0 && (
-                      <>
-                        <Divider />
-                        {previousLicenses.map((license) => (
-                          <div
-                            key={license.licenseId}
-                            style={{ marginTop: 12 }}
+                    {/* {infoLoading ? (
+                        <></>
+                      ) : (
+                        <Flex vertical={true} style={{ marginBottom: 6 }}>
+                          <Flex gap={4}>
+                            <Text
+                              style={{ color: "var(--success-color)" }}
+                              strong
+                            >
+                              Order no: {currentLicense.orderNo}
+                            </Text>
+                          </Flex>
+                          <Text
+                            style={{
+                              fontWeight: 500,
+                            }}
                           >
-                            <Flex vertical={true} style={{ marginBottom: 6 }}>
-                              <Flex gap={4}>
-                                <CloseCircleFilled />
+                            {currentLicense?.features?.standard
+                              ? `Standard + `
+                              : ""}
+                            {currentLicense?.optionalFeatureLength || 0}{" "}
+                            optional features
+                          </Text>
+                        </Flex>
+                      )} */}
+                    {/* Current license */}
+                    {renderFeatures(currentLicense)}
+                    <Row style={{ marginTop: 16 }}>
+                      <Col
+                        span={24}
+                        style={{ display: "flex", justifyContent: "end" }}
+                      >
+                        <Button
+                          onClick={() => {
+                            const projectName = selectedRecord?.name || "";
+                            navigate(
+                              `/dashboard/license?search=${encodeURIComponent(
+                                projectName
+                              )}`
+                            );
+                          }}
+                          size="middle"
+                          type="text"
+                          style={{
+                            border: "2px solid var(--secondary-color)",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "var(--primary-color)",
+                            borderRadius: 8,
+                          }}
+                        >
+                          Check license
+                        </Button>
+                      </Col>
+                    </Row>
+                    {/* Previous Packages */}
+                    {/* {previousLicenses.length > 0 && (
+                      <>
+                        <Divider size="middle" />
+                        {previousLicenses.map((license, index) => (
+                          <>
+                            <div key={license.licenseId}>
+                              <Flex vertical={true} style={{ marginBottom: 6 }}>
+                                <Flex gap={4}>
+                                  <CloseCircleFilled />
+                                  <Text
+                                    strong
+                                    style={{ color: "#6a6a6a" }}
+                                    delete
+                                  >
+                                    Order no: {license.orderNo}
+                                  </Text>
+                                </Flex>
+
                                 <Text
-                                  strong
-                                  style={{ color: "#6a6a6a" }}
-                                  delete
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    color: "#949494",
+                                  }}
                                 >
-                                  Order no: {license.orderNo}
+                                  {license.features?.standard
+                                    ? `Standard + `
+                                    : ""}
+                                  {license.optionalFeatureLength || 0} optional
+                                  features&nbsp;
                                 </Text>
                               </Flex>
-
-                              <Text
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 500,
-                                  color: "#949494",
-                                }}
-                              >
-                                {license.features?.standard
-                                  ? `Standard + `
-                                  : ""}
-                                {license.optionalFeatureLength || 0} optional
-                                features&nbsp;
-                                {/* (
-                                {license?.features?.standard?.period ||
-                                  license?.features?.optional?.period}
-                                ) */}
-                              </Text>
-                            </Flex>
-                            {renderFeatures(license)}
-                          </div>
+                              {renderFeatures(license)}
+                            </div>
+                            {index !== previousLicenses.length - 1 && (
+                              <Divider size="middle" />
+                            )}
+                          </>
                         ))}
                       </>
-                    )}
-                  </div>
+                    )} */}
+                  </Flex>
                 )}
               </Col>
             </Row>

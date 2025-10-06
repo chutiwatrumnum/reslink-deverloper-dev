@@ -17,6 +17,7 @@ type PreviewSummaryPropsType = {
   optionalFeature: FeaturesDataType[];
   form?: any;
   licenseId?: string | null;
+  isTrial?: boolean;
 };
 
 const { Text } = Typography;
@@ -28,6 +29,7 @@ const PreviewSummary = ({
   optionalFeature,
   form,
   licenseId,
+  isTrial,
 }: PreviewSummaryPropsType) => {
   const { data: basedPriceData } = useFeaturesBasePriceQuery();
   const { data: previewFeature } = usePreviewFeatureByLicenseIdQuery(
@@ -323,11 +325,11 @@ const PreviewSummary = ({
           level={3}
           style={{ color: "var(--secondary-color)", margin: 0 }}
         >
-          {total === 0 ? (
-            <>00.00.-</>
-          ) : (
-            Number(total.toFixed(2)).toLocaleString() + ".-"
-          )}
+          {isTrial
+            ? "Free"
+            : total === 0
+            ? "00.00.-"
+            : Number(total.toFixed(2)).toLocaleString() + ".-"}
         </Typography.Title>
       </Flex>
     </Card>
