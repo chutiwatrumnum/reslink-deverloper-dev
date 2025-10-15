@@ -54,59 +54,86 @@ export default function DeveloperNewsCreateModal({
 
   const handleImageChange = (url: string) => setImageUrl(url);
 
-  const onFinish = (values: any) => {
-    callConfirmModal({
-      title: "Create news?",
-      message: "Are you sure you want to create this news?",
-      okMessage: "Confirm",
-      cancelMessage: "Cancel",
-      onOk: () => {
-        if (!createMutation) return;
+ const onFinish = (values: any) => {
+   callConfirmModal({
+     title: "Create news?",
+     message: "Are you sure you want to create this news?",
+     okMessage: "Confirm",
+     cancelMessage: "Cancel",
+     onOk: () => {
+       if (!createMutation) return;
 
-        // จัดการ projects - ถ้าเลือก "all" ให้ส่งทุก project ไป
-        let projectsToSend = values.projects || [];
-        if (projectsToSend.includes("all")) {
-          const filteredProjects = projectsData.filter(
-            (project) =>
-              project.value !== "all" &&
-              project.label !== "All" &&
-              project.value !== "All" &&
-              project.label?.toLowerCase() !== "all"
-          );
-          projectsToSend = filteredProjects.map((project) => project.value);
-        }
+       // จัดการ projects - ถ้าเลือก "all" ให้ส่งทุก project ไป
+       let projectsToSend = values.projects || [];
+       if (projectsToSend.includes("all")) {
+         const filteredProjects = projectsData.filter(
+           (project) =>
+             project.value !== "all" &&
+             project.label !== "All" &&
+             project.value !== "All" &&
+             project.label?.toLowerCase() !== "all"
+         );
+         projectsToSend = filteredProjects.map((project) => project.value);
+       }
 
-        const payload: DeveloperNewsAddNew = {
-          title: values.title,
-          description: values.description || "",
-          url: values.url || "",
-          imageUrl,
-          startDate: values.startDate
-            ? dayjs(values.startDate).format("YYYY-MM-DD")
-            : "",
-          endDate: values.endDate
-            ? dayjs(values.endDate).format("YYYY-MM-DD")
-            : "",
-          startTime: values.startTime
-            ? dayjs(values.startTime).format("HH:mm")
-            : undefined,
-          endTime: values.endTime
-            ? dayjs(values.endTime).format("HH:mm")
-            : undefined,
-          projects: projectsToSend.map((id: string) => ({ projectId: id })),
-        };
+       // --- ส่วนที่แก้ไขใหม่ ---
 
-        createMutation.mutate(payload, {
-          onSuccess: () => {
-            form.resetFields();
-            setImageUrl("");
-            onOk();
-            onRefresh();
-          },
-        });
-      },
-    });
-  };
+       let startDateToSend, endDateToSend, startTimeToSend, endTimeToSend;
+
+       // จัดการเวลาเริ่มต้น (Start Date & Time)
+       if (values.startDate && values.startTime) {
+         // 1. รวมวันที่และเวลาที่ผู้ใช้เลือก ให้เป็นอ็อบเจกต์เวลาท้องถิ่นที่สมบูรณ์
+         const localStartDateTime = dayjs(values.startDate)
+           .hour(dayjs(values.startTime).hour())
+           .minute(dayjs(values.startTime).minute())
+           .second(0);
+
+         // 2. บวกเพิ่ม 7 ชั่วโมง เพื่อชดเชยที่ Backend จะลบออก
+         const compensatedStartDateTime = localStartDateTime.add(7, "hour");
+
+         // 3. จัดรูปแบบวันที่และเวลาที่ชดเชยแล้ว เพื่อเตรียมส่ง
+         startDateToSend = compensatedStartDateTime.format("YYYY-MM-DD");
+         startTimeToSend = compensatedStartDateTime.format("HH:mm");
+       }
+
+       // จัดการเวลาสิ้นสุด (End Date & Time) - ทำเหมือนกัน
+       if (values.endDate && values.endTime) {
+         const localEndDateTime = dayjs(values.endDate)
+           .hour(dayjs(values.endTime).hour())
+           .minute(dayjs(values.endTime).minute())
+           .second(0);
+
+         const compensatedEndDateTime = localEndDateTime.add(7, "hour");
+
+         endDateToSend = compensatedEndDateTime.format("YYYY-MM-DD");
+         endTimeToSend = compensatedEndDateTime.format("HH:mm");
+       }
+       // --- จบส่วนที่แก้ไข ---
+
+       const payload: DeveloperNewsAddNew = {
+         title: values.title,
+         description: values.description || "",
+         url: values.url || "",
+         imageUrl,
+         // ใช้ค่าที่ผ่านการชดเชยแล้ว
+         startDate: startDateToSend || "",
+         endDate: endDateToSend || "",
+         startTime: startTimeToSend,
+         endTime: endTimeToSend,
+         projects: projectsToSend.map((id: string) => ({ projectId: id })),
+       };
+
+       createMutation.mutate(payload, {
+         onSuccess: () => {
+           form.resetFields();
+           setImageUrl("");
+           onOk();
+           onRefresh();
+         },
+       });
+     },
+   });
+ };
 
   const handleClose = () => {
     form.resetFields();
