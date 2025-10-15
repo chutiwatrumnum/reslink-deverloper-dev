@@ -59,5 +59,14 @@
 }
 
 .ant-btn.buttonMapInfo {
+    border: 2px solid var(--secondary-color);
+    font-size: 12px;
+    padding: 4px 8px;
     border-radius: 6px !important;
+    color: var(--primary-color);
 }
+
+.customTextInfo {
+    color: var(--primary-color);
+}
+

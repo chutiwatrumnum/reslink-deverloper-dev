@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // Components
-import { Form, Row, Col, Input, Radio, Select, Spin, Modal } from "antd";
+import { Form, Row, Col, Input, Radio, Select, Spin } from "antd";
 import UploadImageWithCrop from "../UploadImageWithCrop";
 import FormModal from "../../../../components/common/FormModal";
 import { callConfirmModal } from "../../../../components/common/Modal";
@@ -19,20 +19,17 @@ import { requiredRule, telRule } from "../../../../configs/inputRule";
 // APIs & Data
 import { useEditProjectManagementMutation } from "../../../../utils/mutationsGroup/projectManagement";
 import { useProjectTypeQuery } from "../../../../utils/queriesGroup/projectManagementQueries";
-import "../../styles/projectManagement.css";
-
 // JSON
 import countryData from "../../json/countries.json";
 import provinceData from "../../json/states.json";
 import districtData from "../../json/cities.json";
 import subDistrictData from "../../json/subDistrict.json";
-
 // Google map
 import GoogleMapComponent from "../GoogleMapComponent";
-
 // CSS
 import "../../styles/stepModalCreate.css";
 import "../../styles/newProjectForm.css";
+import "../../styles/projectManagement.css";
 
 type EditProjectModalPropsType = {
   data: ProjectManageType | null;
@@ -396,6 +393,7 @@ const EditProjectModal = ({
                     flexWrap: "wrap",
                     rowGap: 10,
                   }}
+                  className="radioProjectType"
                 >
                   {typeData?.map((item: any) => (
                     <Radio key={item.id} value={item.id.toString()}>
@@ -583,7 +581,7 @@ const EditProjectModal = ({
                 <UploadImageWithCrop ratio="16:9 Ratio" height={180} />
               </Form.Item>
               <Form.Item
-                label="Logo project"
+                label="Project logo"
                 name="logo"
                 valuePropName="value"
                 rules={[
@@ -604,6 +602,7 @@ const EditProjectModal = ({
             <Col span={6}>
               <Form.Item
                 label="Map"
+                required
                 rules={[
                   {
                     validator: () => {
@@ -623,14 +622,17 @@ const EditProjectModal = ({
             </Col>
           </Row>
           <Row>
-            <Col span={24} style={{ justifyItems: "flex-end" }}>
+            <Col span={6}></Col>
+            <Col span={6}></Col>
+            <Col span={6}></Col>
+            <Col span={6}>
               <Form.Item
-                style={{ margin: 0 }}
+                style={{ margin: 0, width: "100%" }}
                 className="buttonGroupCreateProject"
               >
                 {/* ถ้า SmallButton ของคุณรองรับ loading ก็ใส่ loading={savingProject} ได้ */}
                 <SmallButton
-                  className="saveButton"
+                  className="saveButton projectButton"
                   message="Save"
                   form={form}
                 />
@@ -647,7 +649,7 @@ const EditProjectModal = ({
       <FormModal
         width="90%"
         isOpen={isEditModalOpen}
-        title="Edit Project"
+        title="Edit project"
         content={<ProjectForm />}
         onOk={onOk}
         onCancel={onModalClose}

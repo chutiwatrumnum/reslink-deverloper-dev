@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
+// Components
 import { Upload, Typography, message, Flex } from "antd";
+// Config
 import { whiteLabel } from "../../../configs/theme";
+// Type
 import type { RcFile, UploadProps } from "antd/es/upload/interface";
+// Icon
 import { InboxOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;

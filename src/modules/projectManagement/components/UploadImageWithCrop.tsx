@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { Upload, Typography, Button, message } from "antd";
-import type { GetProp, UploadProps } from "antd";
-import ImgCrop from "antd-img-crop";
-import { NoImageIcon } from "../../../assets/icons/Icons";
-import { UploadImageIcon } from "../../../assets/icons/Icons";
-import { whiteLabel } from "../../../configs/theme";
-import "../styles/uploadImageWithCrop.css";
-import { DeleteOutlined } from "@ant-design/icons";
 import { RcFile } from "antd/es/upload";
-
+// Components
+import { Upload, Typography, Button, message } from "antd";
+import ImgCrop from "antd-img-crop";
+// Type
+import type { GetProp, UploadProps } from "antd";
+// Icons
+import { TrashIcon, UploadImageIcon } from "../../../assets/icons/Icons";
+// Configs
+import { whiteLabel } from "../../../configs/theme";
 // CSS
+import "../styles/uploadImageWithCrop.css";
 import "../styles/uploadImageWithCrop.css";
 
 const { Text } = Typography;
@@ -153,8 +154,8 @@ const UploadImageWithCrop: React.FC<UploadImageWithCropPropsType> = ({
           onClick={handleDelete}
           size="small"
           type="text"
-          icon={<DeleteOutlined style={{ color: whiteLabel.dangerColor }} />}
-          style={{ marginTop: 4, color: whiteLabel.dangerColor }}
+          icon={<TrashIcon color={whiteLabel.grayColor} />}
+          style={{ marginTop: 8, color: whiteLabel.grayColor }}
         >
           Change image
         </Button>

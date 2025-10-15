@@ -15,13 +15,7 @@ import {
   Tag,
   message,
   Modal,
-  Collapse,
   Empty,
-  Space,
-  Spin,
-  Divider,
-  Card,
-  Timeline,
 } from "antd";
 import CreateProjectModal from "../components/modals/CreateProjectModal";
 import EditProjectModal from "../components/modals/EditProjectModal";
@@ -29,7 +23,6 @@ import { callConfirmModal } from "../../../components/common/Modal";
 // Types
 import type { TabsProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
-// Data & APIs
 import type { ProjectManageType } from "../../../stores/interfaces/ProjectManage";
 // Icons
 import {
@@ -41,27 +34,27 @@ import {
   ContainerOutlined,
   CheckCircleFilled,
   WarningOutlined,
-  CloseCircleFilled,
 } from "@ant-design/icons";
 import { InfoIcon, TrashIcon, EditIcon } from "../../../assets/icons/Icons";
 // APIs & Data
-import {
-  useProjectManagementQuery,
-  useFeatureByProjectIdQuery,
-} from "../../../utils/queriesGroup/projectManagementQueries";
+import { useProjectManagementQuery } from "../../../utils/queriesGroup/projectManagementQueries";
 import { useDeleteProjectManagementMutation } from "../../../utils/mutationsGroup/projectManagement";
+// CSS
 import "../styles/projectManagement.css";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
+
+  const [search, setSearch] = useState<string>("");
   const [curPage, setCurPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const [isApproved, setIsApproved] = useState(true);
-  const [search, setSearch] = useState<string>("");
 
   const [selectedRecord, setSelectedRecord] =
     useState<ProjectManageType | null>(null);
+
+  const [dataEdit, setDataEdit] = useState<ProjectManageType | null>(null);
 
   const {
     data: projectData,
@@ -77,14 +70,7 @@ const ProjectManagement = () => {
   // Mutations
   const deleteMutation = useDeleteProjectManagementMutation();
 
-  const { data: featureByProjectId, isLoading: infoLoading } =
-    useFeatureByProjectIdQuery(selectedRecord?.id?.toString());
-
-  const licenseData = featureByProjectId || [];
-
   const [currentStep, setCurrentStep] = useState<number>(1);
-
-  const [dataEdit, setDataEdit] = useState<ProjectManageType | null>(null);
 
   // Modal states
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
@@ -97,7 +83,7 @@ const ProjectManagement = () => {
   const [refresh, setRefresh] = useState<boolean>(false);
 
   const handlePaginationChange = (page: number, size?: number) => {
-    console.log("Pagination change:", { page, size });
+    // console.log("Pagination change:", { page, size });
     setCurPage(page);
     if (size && size !== pageSize) {
       setPageSize(size);
@@ -110,6 +96,7 @@ const ProjectManagement = () => {
 
   // Search
   const { Search } = Input;
+
   const onSearch = (value: string) => {
     setSearch(value.trim());
     setCurPage(1);
@@ -129,6 +116,7 @@ const ProjectManagement = () => {
       setIsApproved(false);
     }
   };
+
   // 🪧➕ Request new project Modal
   const onCreate = () => {
     setIsCreateProjectModalOpen(true);
@@ -146,7 +134,6 @@ const ProjectManagement = () => {
   // 🪧📋 Info project Modal
   const onInfo = (record: ProjectManageType) => {
     setSelectedRecord(record);
-    // setSelectedProjectId(String(record.project?.id));
     setIsInfoProjectModalOpen(true);
   };
   const onInfoCancel = () => {
@@ -172,17 +159,16 @@ const ProjectManagement = () => {
     refetchProject();
   };
 
+  // Project id and License id state
   const [projectId, setProjectId] = useState<string | null>(null);
-
   const [licenseId, setLicenseId] = useState<string | null>(null);
 
   const onContinue = (record: ProjectManageType) => {
     const projectId = record.id;
-    // const licenses = featureAndProjectById?.result?.licenses || [];
-    // const license = licenses.find((i) => i.projectId === projectId);
     const licId = record?.licenseId ?? null;
+
     if (!projectId) {
-      message.error("Project ID not found");
+      message.error("Project Id not found");
       return;
     }
 
@@ -204,6 +190,7 @@ const ProjectManagement = () => {
 
     setIsCreateProjectModalOpen(true);
   };
+
   // Map click
   const onViewMap = (
     lat: number | string | undefined,
@@ -231,7 +218,7 @@ const ProjectManagement = () => {
             }
           );
         } else {
-          console.error("No ID found for deletion");
+          console.error("No ID found for delete");
           message.error("Cannot delete: No ID found");
         }
       },
@@ -386,7 +373,7 @@ const ProjectManagement = () => {
               <span>{fullName || "-"}</span>
             </p>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {record?.createdBy?.role?.name || "-"}
+              {"(" + record?.createdBy?.role?.name + ")" || "-"}
             </Text>
           </Flex>
         );
@@ -424,17 +411,13 @@ const ProjectManagement = () => {
         const status = record?.statusDisplay;
         if (active === true) {
           return (
-            <Tag
+            <Text
               style={{
-                color: "#38BE43",
-                backgroundColor: "#E6F9E6",
-                borderColor: "#38BE43",
-                margin: 0,
-                borderRadius: 8,
+                color: "var(--primary-color)",
               }}
             >
-              Success
-            </Tag>
+              {record.package}
+            </Text>
           );
         }
         switch (status) {
@@ -506,33 +489,21 @@ const ProjectManagement = () => {
               <Button
                 onClick={() => onInfo(record)}
                 type="text"
-                icon={
-                  <InfoIcon
-                    style={{ fontSize: 18, color: "var(--primary-color)" }}
-                  />
-                }
+                icon={<InfoIcon style={{ fontSize: 18 }} />}
               />
             </Col>
             <Col>
               <Button
                 type="text"
                 onClick={() => onEditProject(record)}
-                icon={
-                  <EditIcon
-                    style={{ fontSize: 18, color: "var(--primary-color)" }}
-                  />
-                }
+                icon={<EditIcon style={{ fontSize: 18 }} />}
               />
             </Col>
             <Col>
               <Button
                 type="text"
                 onClick={() => showDeleteUnverifiedConfirm(record)}
-                icon={
-                  <TrashIcon
-                    style={{ fontSize: 18, color: "var(--primary-color)" }}
-                  />
-                }
+                icon={<TrashIcon style={{ fontSize: 18 }} />}
               />
             </Col>
           </Row>
@@ -688,7 +659,7 @@ const ProjectManagement = () => {
               <span>{fullName || "-"}</span>
             </p>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {record?.createdBy?.role?.name || "-"}
+              {"(" + record?.createdBy?.role?.name + ")" || "-"}
             </Text>
           </Flex>
         );
@@ -808,33 +779,21 @@ const ProjectManagement = () => {
               <Button
                 onClick={() => onInfo(record)}
                 type="text"
-                icon={
-                  <InfoIcon
-                    style={{ fontSize: 18, color: "var(--primary-color)" }}
-                  />
-                }
+                icon={<InfoIcon style={{ fontSize: 12 }} />}
               />
             </Col>
             <Col>
               <Button
                 type="text"
                 onClick={() => onEditProject(record)}
-                icon={
-                  <EditIcon
-                    style={{ fontSize: 18, color: "var(--primary-color)" }}
-                  />
-                }
+                icon={<EditIcon style={{ fontSize: 18 }} />}
               />
             </Col>
             <Col>
               <Button
                 type="text"
                 onClick={() => showDeleteUnverifiedConfirm(record)}
-                icon={
-                  <TrashIcon
-                    style={{ fontSize: 18, color: "var(--primary-color)" }}
-                  />
-                }
+                icon={<TrashIcon style={{ fontSize: 18 }} />}
               />
             </Col>
           </Row>
@@ -850,7 +809,7 @@ const ProjectManagement = () => {
         text: "Activated",
       },
       "Draft project": {
-        color: "#34495d",
+        color: "var(--gray-color)",
         text: "Draft Project",
       },
       "Pending activate": {
@@ -880,149 +839,12 @@ const ProjectManagement = () => {
   };
   const statusStyle = getStatusStyle(selectedRecord?.statusDisplay);
 
-  const sortedLicenses = [...licenseData].sort((a, b) => {
-    const getStart = (features) => {
-      if (!features) return new Date(0);
-      return new Date(
-        features?.period?.split("-")[0]?.trim().split("/").reverse().join("-")
-      );
-    };
-
-    const aStart = getStart(a.features?.standard || a.features?.optional);
-    const bStart = getStart(b.features?.standard || b.features?.optional);
-
-    return bStart - aStart;
-  });
-
-  const currentLicense = sortedLicenses[0];
-  // const previousLicenses = sortedLicenses.slice(1);
-
-  //📍 Collapse version (Render standard and optional features)
-  // const renderFeatures = (license: any) => {
-  //   return (
-  //     <Space direction="vertical" style={{ width: "100%" }}>
-  //       {/* Standard features */}
-  //       {license?.features?.standard && (
-  //         <Collapse
-  //           style={{ borderRadius: 10 }}
-  //           items={[
-  //             {
-  //               key: "1",
-  //               label: `Standard (License period: ${license.features.standard.period})`,
-  //               children: (
-  //                 <Row gutter={[8, 8]}>
-  //                   {license.features.standard.features?.map(
-  //                     (feature: any, index: number) => (
-  //                       <Col span={8} key={index}>
-  //                         <Flex gap={8} align="start">
-  //                           <CheckCircleFilled
-  //                             style={{ color: "var(--success-color)" }}
-  //                           />
-  //                           <Text style={{ margin: 0, fontSize: 12 }}>
-  //                             {feature.feature.name}
-  //                           </Text>
-  //                         </Flex>
-  //                       </Col>
-  //                     )
-  //                   )}
-  //                 </Row>
-  //               ),
-  //             },
-  //           ]}
-  //         />
-  //       )}
-
-  //       {/* Optional features */}
-  //       {license?.features?.optional?.features?.length > 0 && (
-  //         <Collapse
-  //           style={{ borderRadius: 10 }}
-  //           key={license.licenseId}
-  //           items={[
-  //             {
-  //               key: "optional",
-  //               label: `Optional (License period: ${license.features.optional.period})`,
-  //               children: (
-  //                 <Row gutter={[8, 8]}>
-  //                   {license.features.optional.features.map(
-  //                     (feature, idx: number) => (
-  //                       <Col span={8} key={idx}>
-  //                         <Flex gap={8} align="start">
-  //                           <CheckCircleFilled
-  //                             style={{ color: "var(--success-color)" }}
-  //                           />
-  //                           <Text style={{ margin: 0, fontSize: 12 }}>
-  //                             {feature.feature.name}
-  //                           </Text>
-  //                         </Flex>
-  //                       </Col>
-  //                     )
-  //                   )}
-  //                 </Row>
-  //               ),
-  //             },
-  //           ]}
-  //         />
-  //       )}
-  //     </Space>
-  //   );
-  // };
-
-  // 📦 Box version (Render standard and optional features)
-  const renderFeatures = (license: any) => {
-    return (
-      <Space size="middle" direction="vertical" style={{ width: "100%" }}>
-        {/* Standard features */}
-        {license?.features?.standard && (
-          <Flex vertical={true} gap={6}>
-            <Text style={{ marginBottom: 6 }} strong>
-              Standard
-            </Text>
-            <Row gutter={[10, 10]}>
-              {license.features.standard.features?.map(
-                (feature: any, index: number) => (
-                  <Col span={8} key={index}>
-                    <Flex gap={8} align="start">
-                      <CheckCircleFilled
-                        style={{ color: "var(--success-color)" }}
-                      />
-                      <Text style={{ margin: 0, fontSize: 12 }}>
-                        {feature.feature.name}
-                      </Text>
-                    </Flex>
-                  </Col>
-                )
-              )}
-            </Row>
-          </Flex>
-        )}
-
-        {/* Optional features */}
-        {license?.features?.optional?.features?.length > 0 && (
-          <Flex vertical={true} gap={6}>
-            <Text style={{ marginBottom: 6 }} strong>
-              Optional
-            </Text>
-            <Row gutter={[10, 10]}>
-              {license.features.optional.features.map(
-                (feature, idx: number) => (
-                  <Col span={8} key={idx}>
-                    <Flex gap={8} align="start">
-                      <CheckCircleFilled
-                        style={{ color: "var(--success-color)" }}
-                      />
-                      <Text style={{ margin: 0, fontSize: 12 }}>
-                        {feature.feature.name}
-                      </Text>
-                    </Flex>
-                  </Col>
-                )
-              )}
-            </Row>
-          </Flex>
-        )}
-      </Space>
-    );
-  };
+  // For render features in info modal
+  const standardFeatures =
+    selectedRecord?.currentActivateFeature?.standard ?? [];
+  const optionalFeatures =
+    selectedRecord?.currentActivateFeature?.optional ?? [];
+  const features = standardFeatures.length > 0 || optionalFeatures.length > 0;
 
   return (
     <>
@@ -1118,7 +940,9 @@ const ProjectManagement = () => {
               {/* Image and Logo Info */}
               <Col span={4}>
                 <Flex vertical={true} gap={6} style={{ marginBottom: 16 }}>
-                  <Text strong>Project image</Text>
+                  <Text strong style={{ color: "var(--primary-color)" }}>
+                    Project image
+                  </Text>
                   {!selectedRecord?.image ? (
                     <Flex
                       style={{
@@ -1149,7 +973,9 @@ const ProjectManagement = () => {
                   )}
                 </Flex>
                 <Flex vertical={true} gap={6}>
-                  <Text strong>Logo project</Text>
+                  <Text strong style={{ color: "var(--primary-color)" }}>
+                    Logo project
+                  </Text>
                   {!selectedRecord?.logo ? (
                     <Flex
                       style={{
@@ -1184,7 +1010,11 @@ const ProjectManagement = () => {
               <Col span={9}>
                 <Row style={{ marginBottom: 6 }}>
                   <Col span={24}>
-                    <Text style={{ fontWeight: 600 }}>Project information</Text>
+                    <Text
+                      style={{ fontWeight: 600, color: "var(--primary-color)" }}
+                    >
+                      Project information
+                    </Text>
                   </Col>
                 </Row>
                 <Row
@@ -1196,42 +1026,69 @@ const ProjectManagement = () => {
                   }}
                 >
                   <Col span={24}>
-                    <Row gutter={8} style={{ marginBottom: 24 }}>
+                    <Row
+                      gutter={8}
+                      style={{
+                        marginBottom: 24,
+                      }}
+                    >
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Project name</Text>
-                          <Text>{selectedRecord?.name || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Project name
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.name || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Country</Text>
-                          <Text>{selectedRecord?.country || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Country
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.country || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Phone</Text>
-                          <Text>{selectedRecord?.contactNumber || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Phone
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.contactNumber || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                     </Row>
                     <Row gutter={8} style={{ marginBottom: 24 }}>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Project type</Text>
-                          <Text>{selectedRecord?.type?.nameEn || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Project type
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.type?.nameEn || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Province</Text>
-                          <Text>{selectedRecord?.province || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Province
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.province || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Map</Text>
+                          <Text strong className="customTextInfo">
+                            Map
+                          </Text>
                           {selectedRecord?.lat && selectedRecord?.long && (
                             <Button
                               size="middle"
@@ -1242,11 +1099,6 @@ const ProjectManagement = () => {
                                   selectedRecord?.long
                                 )
                               }
-                              style={{
-                                border: `2px solid var(--secondary-color)`,
-                                fontSize: 12,
-                                padding: "4px 8px",
-                              }}
                               className="buttonMapInfo"
                             >
                               Google map
@@ -1258,19 +1110,29 @@ const ProjectManagement = () => {
                     <Row gutter={8} style={{ marginBottom: 24 }}>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Address</Text>
-                          <Text>{selectedRecord?.address || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Address
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.address || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>District</Text>
-                          <Text>{selectedRecord.district || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            District
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord.district || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Status</Text>
+                          <Text strong className="customTextInfo">
+                            Status
+                          </Text>
                           <Text
                             style={{
                               color: statusStyle.color,
@@ -1285,28 +1147,44 @@ const ProjectManagement = () => {
                     <Row gutter={8} style={{ marginBottom: 24 }}>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Soi</Text>
-                          <Text>{selectedRecord?.subStreet || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Soi
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.subStreet || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Sub-district</Text>
-                          <Text>{selectedRecord?.subdistrict || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Sub-district
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.subdistrict || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                     </Row>
                     <Row gutter={8}>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Road</Text>
-                          <Text>{selectedRecord?.road || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Road
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.road || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                       <Col span={8}>
                         <Flex vertical={true} gap={6}>
-                          <Text strong>Postal code</Text>
-                          <Text>{selectedRecord?.zipCode || "-"}</Text>
+                          <Text strong className="customTextInfo">
+                            Postal code
+                          </Text>
+                          <Text className="customTextInfo">
+                            {selectedRecord?.zipCode || "-"}
+                          </Text>
                         </Flex>
                       </Col>
                     </Row>
@@ -1316,141 +1194,133 @@ const ProjectManagement = () => {
               {/* Standard package and Optional feature preview */}
               <Col span={11}>
                 <Flex vertical={true} style={{ marginBottom: 6 }}>
-                  <Text strong>Features available</Text>
+                  <Text strong style={{ color: "var(--primary-color)" }}>
+                    Features available
+                  </Text>
                 </Flex>
-                {infoLoading ? (
-                  <Spin tip="loading">
-                    <div
-                      style={{
-                        width: "100%",
-                        height: 120,
-                        backgroundColor: "#fafafa",
-                      }}
-                    ></div>
-                  </Spin>
-                ) : licenseData.length === 0 ? (
-                  <Flex
-                    style={{
-                      padding: 48,
-                      width: "100%",
-                      border: "1px solid #c7c9c9",
-                      borderRadius: 16,
-                    }}
-                    justify="center"
-                    align="center"
-                  >
-                    <Empty />
-                  </Flex>
-                ) : (
-                  <Flex
-                    style={{
-                      border: "1px solid #C6C8C9",
-                      borderRadius: 16,
-                      padding: 12,
-                      height: "100%",
-                    }}
-                    vertical={true}
-                    justify="space-between"
-                  >
-                    {/* {infoLoading ? (
-                        <></>
-                      ) : (
-                        <Flex vertical={true} style={{ marginBottom: 6 }}>
-                          <Flex gap={4}>
-                            <Text
-                              style={{ color: "var(--success-color)" }}
-                              strong
-                            >
-                              Order no: {currentLicense.orderNo}
-                            </Text>
-                          </Flex>
+                <Flex
+                  style={{
+                    border: "1px solid #C6C8C9",
+                    borderRadius: 16,
+                    padding: 12,
+                    height: "100%",
+                  }}
+                  vertical={true}
+                  justify="space-between"
+                >
+                  {/* Current Activated Features */}
+                  {features ? (
+                    <Flex vertical gap={12}>
+                      {standardFeatures.length > 0 && (
+                        <Flex vertical gap={6}>
                           <Text
                             style={{
-                              fontWeight: 500,
+                              marginBottom: 6,
+                              color: "var(--primary-color)",
                             }}
+                            strong
                           >
-                            {currentLicense?.features?.standard
-                              ? `Standard + `
-                              : ""}
-                            {currentLicense?.optionalFeatureLength || 0}{" "}
-                            optional features
+                            Standard
                           </Text>
-                        </Flex>
-                      )} */}
-                    {/* Current license */}
-                    {renderFeatures(currentLicense)}
-                    <Row style={{ marginTop: 16 }}>
-                      <Col
-                        span={24}
-                        style={{ display: "flex", justifyContent: "end" }}
-                      >
-                        <Button
-                          onClick={() => {
-                            const projectName = selectedRecord?.name || "";
-                            navigate(
-                              `/dashboard/license?search=${encodeURIComponent(
-                                projectName
-                              )}`
-                            );
-                          }}
-                          size="middle"
-                          type="text"
-                          style={{
-                            border: "2px solid var(--secondary-color)",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "var(--primary-color)",
-                            borderRadius: 8,
-                          }}
-                        >
-                          Check license
-                        </Button>
-                      </Col>
-                    </Row>
-                    {/* Previous Packages */}
-                    {/* {previousLicenses.length > 0 && (
-                      <>
-                        <Divider size="middle" />
-                        {previousLicenses.map((license, index) => (
-                          <>
-                            <div key={license.licenseId}>
-                              <Flex vertical={true} style={{ marginBottom: 6 }}>
-                                <Flex gap={4}>
-                                  <CloseCircleFilled />
+                          <Row gutter={[10, 10]}>
+                            {standardFeatures.map((item, index) => (
+                              <Col span={8} key={item.featuresId || index}>
+                                <Flex gap={8} align="start">
+                                  <CheckCircleFilled
+                                    style={{ color: "var(--success-color)" }}
+                                  />
                                   <Text
-                                    strong
-                                    style={{ color: "#6a6a6a" }}
-                                    delete
+                                    style={{
+                                      margin: 0,
+                                      fontSize: 12,
+                                      color: "var(--primary-color)",
+                                    }}
                                   >
-                                    Order no: {license.orderNo}
+                                    {item.feature?.name}
                                   </Text>
                                 </Flex>
+                              </Col>
+                            ))}
+                          </Row>
+                        </Flex>
+                      )}
 
-                                <Text
-                                  style={{
-                                    fontSize: 13,
-                                    fontWeight: 500,
-                                    color: "#949494",
-                                  }}
-                                >
-                                  {license.features?.standard
-                                    ? `Standard + `
-                                    : ""}
-                                  {license.optionalFeatureLength || 0} optional
-                                  features&nbsp;
-                                </Text>
-                              </Flex>
-                              {renderFeatures(license)}
-                            </div>
-                            {index !== previousLicenses.length - 1 && (
-                              <Divider size="middle" />
-                            )}
-                          </>
-                        ))}
-                      </>
-                    )} */}
-                  </Flex>
-                )}
+                      {optionalFeatures.length > 0 && (
+                        <Flex vertical gap={6}>
+                          <Text
+                            style={{
+                              marginBottom: 6,
+                              color: "var(--primary-color)",
+                            }}
+                            strong
+                          >
+                            Optional
+                          </Text>
+                          <Row gutter={[10, 10]}>
+                            {optionalFeatures.map((item, index) => (
+                              <Col span={8} key={item.featuresId || index}>
+                                <Flex gap={8} align="start">
+                                  <CheckCircleFilled
+                                    style={{ color: "var(--success-color)" }}
+                                  />
+                                  <Text
+                                    style={{
+                                      margin: 0,
+                                      fontSize: 12,
+                                      color: "var(--primary-color)",
+                                    }}
+                                  >
+                                    {item.feature?.name || "-"}
+                                  </Text>
+                                </Flex>
+                              </Col>
+                            ))}
+                          </Row>
+                        </Flex>
+                      )}
+                    </Flex>
+                  ) : (
+                    <Flex
+                      vertical={true}
+                      justify="center"
+                      align="center"
+                      style={{ height: "100%" }}
+                    >
+                      <Empty description={false} />
+                      <Text style={{ color: "var(--gray-color)" }}>
+                        No features available
+                      </Text>
+                    </Flex>
+                  )}
+                  <Row style={{ marginTop: 16 }}>
+                    <Col
+                      span={24}
+                      style={{ display: "flex", justifyContent: "end" }}
+                    >
+                      <Button
+                        onClick={() => {
+                          const projectName = selectedRecord?.name || "";
+                          navigate(
+                            `/dashboard/license?search=${encodeURIComponent(
+                              projectName
+                            )}`
+                          );
+                        }}
+                        size="middle"
+                        type="text"
+                        style={{
+                          border: "2px solid var(--secondary-color)",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "var(--primary-color)",
+                          borderRadius: 8,
+                        }}
+                      >
+                        Check license
+                      </Button>
+                    </Col>
+                  </Row>
+                </Flex>
               </Col>
             </Row>
           </div>

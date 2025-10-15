@@ -166,6 +166,7 @@
 
 .ant-table-tbody > tr > td {
   background-color: var(--tableHeadBg-color) !important;
+  color: var(--primary-color);
 }
 
 .ant-table-thead > tr > th {
@@ -225,4 +226,33 @@
 .iconWidthButton {
   width: 20px;
   height: 20px;
+}
+
+
+/* <===== Modal =====> */
+/* > Close button icon */
+.ant-modal-close {
+  color: #D73232 !important;
+}
+/* > Title modal */
+.ant-modal-title {
+  color: var(--primary-color) !important;
+}
+
+/* <===== Form.item =====> */
+/* > Label text  */
+.ant-form-item-label > label {
+  color: var(--primary-color) !important;
+  font-weight: 500 !important;
+}
+
+/* <===== Select =====> */
+/* > Option dropdown */
+.ant-select-dropdown .ant-select-item-option-content {
+  color: var(--primary-color);
+}
+
+/* <===== Input =====> */
+.ant-input {
+  color: var(--primary-color);
 }

@@ -4,7 +4,7 @@ interface HeaderPropsType {
   className?: string;
 }
 
-const Header = ({ title, className="" }: HeaderPropsType) => {
+const Header = ({ title, className = "" }: HeaderPropsType) => {
   return (
     <>
       <div>

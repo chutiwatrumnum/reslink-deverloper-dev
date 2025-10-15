@@ -186,6 +186,7 @@ export const postCreatePackageInvoiceMutation = () => {
           totalVat: payload.totalVat,
           vatPercent: payload.vatPercent,
           totalPriceWithVat: payload.totalPriceWithVat,
+          isTrial: payload.isTrial,
           features: payload.features
         };
         console.log("API Payload license:", apiPayload);

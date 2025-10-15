@@ -2,11 +2,14 @@
 /* Input form */
 .inputCreateForm {
   border-radius: 16px !important;
+  color: var(--primary-color);
 }
 
 /* Select form */
 .selectCreateForm > .ant-select-selector {
   border-radius: 16px !important;
+  color: var(--primary-color) !important;
+
 }
 
 /* Upload image */
@@ -15,6 +18,10 @@
   border: 1px solid #c6c8c9 !important;
 }
 
+/* Radio */
+.radioProjectType .ant-radio-wrapper {
+  color: var(--primary-color) !important;
+}
 /* Google map input */
 .googleMapInput {
   border-radius: 16px !important;
@@ -84,10 +91,10 @@
 .optionalFeature .ant-checkbox-wrapper-disabled .ant-checkbox-label {
   color: #d3d3d3 !important;
 }
-.saveButton {
-  width: 200px !important;
+.saveButton.projectButton {
+  width: 100%;
+  margin: 0;
 }
-
 /* Button */
 .buttonGroupCreateProject .ant-btn {
   border-radius: 16px !important;

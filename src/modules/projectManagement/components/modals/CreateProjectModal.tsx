@@ -6,7 +6,6 @@ import {
   useMemo,
   useCallback,
 } from "react";
-
 // Components
 import ConfirmModal from "../../../../components/common/ConfirmModal";
 import {
@@ -34,11 +33,9 @@ import SmallButton from "../../../../components/common/SmallButton";
 import { openInvoicePdf } from "../InvoicePDF";
 import GoogleMapComponent from "../GoogleMapComponent";
 import SuccessModal from "../../../../components/common/SuccessModal";
-
 // CSS
 import "../../styles/stepModalCreate.css";
 import "../../styles/newProjectForm.css";
-
 // Types
 import {
   FeaturesDataType,
@@ -53,22 +50,17 @@ import {
   DistrictDataTypes,
 } from "../../../../stores/interfaces/ProjectManage";
 import type { RadioChangeEvent, CheckboxProps } from "antd";
-
 //Image
 import successPaymentImage from "../../../../assets/images/success-payment.png";
-
 // Icons
 import { DeleteOutlined } from "@ant-design/icons";
-
 // Config input rule
 import { requiredRule, telRule } from "../../../../configs/inputRule";
-
-// JSON
+// JSON DATA (Country | Province | District | Sub-district)
 import countryData from "../../json/countries.json";
 import provinceData from "../../json/states.json";
 import districtData from "../../json/cities.json";
 import subDistrictData from "../../json/subDistrict.json";
-
 // Data & APIs
 import {
   postCreateProjectManagementMutation,
@@ -114,7 +106,6 @@ const CreateProjectModal = ({
   const [previewProofPayment, setPreviewProofPayment] = useState("");
 
   // Trial package state
-  const [isTrial, setIsTrial] = useState("");
   const [trialChecked, setTrialChecked] = useState(false);
 
   const onTrial: CheckboxProps["onChange"] = (e) => {
@@ -185,7 +176,7 @@ const CreateProjectModal = ({
 
   const onChange = (e: RadioChangeEvent) => {
     setValue(Number(e.target.value));
-    console.log("Project type selected: ", e.target.value);
+    // console.log("Project type selected: ", e.target.value);
   };
 
   //State for checkbox standard package and optional feature values
@@ -209,7 +200,13 @@ const CreateProjectModal = ({
 
       setCheckedStandardValues(defaultStandardItems);
     }
-  }, [featuresData, isCreateModalOpen, useLicenseId, currentStep]);
+  }, [
+    featuresData,
+    isCreateModalOpen,
+    useLicenseId,
+    currentStep,
+    trialChecked,
+  ]);
 
   const handleStandardChange = (checkedValues: string[]) => {
     setCheckedStandardValues(checkedValues);
@@ -383,7 +380,7 @@ const CreateProjectModal = ({
           key: `${d.id} + ${d.name}`,
         }));
       setOptionsDistrict(provinceDistrict);
-      console.log(provinceDistrict);
+      // console.log(provinceDistrict);
     }
   };
 
@@ -392,8 +389,8 @@ const CreateProjectModal = ({
     const selectedDistrict = allDistricts.find((d) => d.name === value);
     const districtId = selectedDistrict?.id;
 
-    console.log("District Name: ", value);
-    console.log("District ID: ", districtId);
+    // console.log("District Name: ", value);
+    // console.log("District ID: ", districtId);
 
     setSubDistrictValue("");
     setPostalCodeValue("");
@@ -472,6 +469,12 @@ const CreateProjectModal = ({
         return;
       }
 
+      if (trialChecked) {
+        setTrialChecked(true);
+      } else {
+        setTrialChecked(false);
+      }
+
       // Parse features from JSON string
       let parsedFeatures: any[] = [];
       if (typeof values.features === "string") {
@@ -498,6 +501,7 @@ const CreateProjectModal = ({
         totalPrice: Number(values.totalPrice),
         totalPriceWithVat: Number(values.totalPriceWithVat),
         features: parsedFeatures,
+        isTrial: trialChecked,
       };
 
       console.log("Pay load result:", payload);
@@ -722,7 +726,7 @@ const CreateProjectModal = ({
                 rules={[
                   {
                     required: true,
-                    message: "Please input country!",
+                    message: "Please select country!",
                   },
                 ]}
               >
@@ -733,7 +737,7 @@ const CreateProjectModal = ({
                   onSelect={onSelectCountry}
                   allowClear
                   showSearch
-                  placeholder="Please select country"
+                  placeholder="Select country"
                   filterOption={(input, option) =>
                     (option?.label ?? "")
                       .toLowerCase()
@@ -756,7 +760,7 @@ const CreateProjectModal = ({
                 rules={[
                   {
                     required: true,
-                    message: "Please select province!",
+                    message: "Please input province!",
                   },
                 ]}
               >
@@ -768,7 +772,7 @@ const CreateProjectModal = ({
                   allowClear
                   showSearch
                   disabled={!countryValue}
-                  placeholder="Please select province"
+                  placeholder="Please input province"
                   filterOption={(input, option) =>
                     (option?.label ?? "")
                       .toLowerCase()
@@ -783,7 +787,7 @@ const CreateProjectModal = ({
                 rules={[
                   {
                     required: true,
-                    message: "Please select district!",
+                    message: "Please input district!",
                   },
                 ]}
               >
@@ -795,7 +799,7 @@ const CreateProjectModal = ({
                   disabled={!provinceValue}
                   allowClear
                   showSearch
-                  placeholder="Please select district"
+                  placeholder="Please input district"
                   filterOption={(input, option) =>
                     (option?.label ?? "")
                       .toLowerCase()
@@ -849,13 +853,13 @@ const CreateProjectModal = ({
                 <UploadImageWithCrop ratio="16:9 Ratio" height={200} />
               </Form.Item>
               <Form.Item
-                label="Logo project"
+                label="Project logo"
                 name="logo"
                 valuePropName="value"
                 rules={[
                   {
                     required: true,
-                    message: "Please upload logo project!",
+                    message: "Please upload project logo!",
                   },
                 ]}
               >
@@ -889,31 +893,29 @@ const CreateProjectModal = ({
               </Form.Item>
             </Col>
           </Row>
-          <Row style={{ paddingBlock: 8 }}>
-            <Col span={24}>
-              <Flex justify="center" align="center">
-                <Form.Item className="buttonGroupCreateProject">
-                  <Button
-                    size="large"
-                    onClick={onCancelProjectDraftForm}
-                    style={{
-                      width: 200,
-                      borderColor: "var(--secondary-color)",
-                      marginRight: 12,
-                    }}
-                    disabled={savingProject}
-                  >
-                    Cancel
-                  </Button>
-                  {/* ถ้า SmallButton ของคุณรองรับ loading ก็ใส่ loading={savingProject} ได้ */}
-                  <SmallButton
-                    className="saveButton"
-                    message="Next"
-                    form={projectForm}
-                  />
-                </Form.Item>
-              </Flex>
+          <Row gutter={12} style={{ marginBottom: 12 }}>
+            <Col span={6}></Col>
+            <Col span={6} style={{ alignItems: "start" }}>
+              <Button
+                size="large"
+                onClick={onCancelProjectDraftForm}
+                style={{
+                  borderColor: "var(--secondary-color)",
+                  width: "100%",
+                }}
+                disabled={savingProject}
+              >
+                Cancel
+              </Button>
             </Col>
+            <Col span={6}>
+              <SmallButton
+                className="saveButton projectButton"
+                message="Next"
+                form={projectForm}
+              />
+            </Col>
+            <Col span={6}></Col>
           </Row>
         </Form>
       </Spin>
@@ -1178,30 +1180,29 @@ const CreateProjectModal = ({
             </Row>
           </Col>
         </Row>
-        <Row style={{ marginTop: 24 }}>
-          <Col span={24}>
-            <Flex justify="center" align="center">
-              <Form.Item className="buttonGroupCreateProject">
-                <Button
-                  type="text"
-                  size="large"
-                  onClick={onSkipPackageForm}
-                  style={{
-                    width: 200,
-                    borderColor: "var(--secondary-color)",
-                    marginRight: 12,
-                  }}
-                >
-                  Skip
-                </Button>
-                <SmallButton
-                  form={packageForm}
-                  message={!packageForm ? "Next" : "Create invoice"}
-                  className="saveButton"
-                />
-              </Form.Item>
-            </Flex>
+        <Row gutter={12} style={{ marginBlock: 12 }}>
+          <Col span={6}></Col>
+          <Col span={6} style={{ alignItems: "start" }}>
+            <Button
+              size="large"
+              onClick={onSkipPackageForm}
+              style={{
+                borderColor: "var(--secondary-color)",
+                width: "100%",
+              }}
+              disabled={savingProject}
+            >
+              Skip
+            </Button>
           </Col>
+          <Col span={6}>
+            <SmallButton
+              className="saveButton projectButton"
+              form={packageForm}
+              message={!packageForm ? "Next" : "Create invoice"}
+            />
+          </Col>
+          <Col span={6}></Col>
         </Row>
       </Form>
     );
@@ -1300,30 +1301,29 @@ const CreateProjectModal = ({
             />
           </Col>
         </Row>
-        <Row style={{ paddingTop: 12 }}>
-          <Col span={24}>
-            <Flex gap={10} justify="center" align="center">
-              <Form.Item className="buttonGroupCreateProject">
-                <Button
-                  type="text"
-                  size="large"
-                  style={{
-                    width: 200,
-                    borderColor: "var(--secondary-color)",
-                    marginRight: 12,
-                  }}
-                  onClick={onSkipPaymentForm}
-                >
-                  Skip
-                </Button>
-                <SmallButton
-                  form={payForm}
-                  message="Submit"
-                  className="saveButton"
-                />
-              </Form.Item>
-            </Flex>
+        <Row gutter={12} style={{ marginBlock: 12 }}>
+          <Col span={6}></Col>
+          <Col span={6} style={{ alignItems: "start" }}>
+            <Button
+              size="large"
+              onClick={onSkipPaymentForm}
+              style={{
+                borderColor: "var(--secondary-color)",
+                width: "100%",
+              }}
+              disabled={savingProject}
+            >
+              Skip
+            </Button>
           </Col>
+          <Col span={6}>
+            <SmallButton
+              className="saveButton projectButton"
+              form={payForm}
+              message="Submit"
+            />
+          </Col>
+          <Col span={6}></Col>
         </Row>
       </Form>
     );
@@ -1478,6 +1478,7 @@ const CreateProjectModal = ({
         mapCoordsRef.current = undefined;
         hasPickedLocationRef.current = false;
 
+        setTrialChecked(false);
         setCheckedFeatureValues([]);
         setCheckedStandardValues([]);
 

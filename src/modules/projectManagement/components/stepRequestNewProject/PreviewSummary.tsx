@@ -143,18 +143,26 @@ const PreviewSummary = ({
     selectedStandardPackage,
     selectedOptionalFeature,
     basedPriceData,
+    isTrial,
   ]);
 
-  const standardBasePrice =
-    checkedStandardValues.length > 0 ? getStandardPrice() : 0;
-  const optionalBasePrice = selectedOptionalFeature.reduce(
-    (sum, f) => sum + Number(f.price ?? 0),
-    0
-  );
+  const standardBasePrice = isTrial
+    ? 0
+    : checkedStandardValues.length > 0
+    ? getStandardPrice()
+    : 0;
+
+  const optionalBasePrice = isTrial
+    ? 0
+    : selectedOptionalFeature.reduce(
+        (sum: number, item) => sum + Number(item.price ?? 0),
+        0
+      );
+
   const subtotal = standardBasePrice + optionalBasePrice;
   const vatRate = getVatRate();
-  const vatAmount = subtotal * vatRate;
-  const total = subtotal + vatAmount;
+  const vatAmount = isTrial ? 0 : subtotal * vatRate;
+  const total = isTrial ? 0 : subtotal + vatAmount;
 
   return (
     <Card style={{ marginBottom: 12 }} className="previewSumCard">
@@ -192,7 +200,7 @@ const PreviewSummary = ({
               </Row>
               <Row className="previewPackageRow">
                 <Col span={12}>
-                  {selectedStandardPackage.map((item, index) => (
+                  {selectedStandardPackage.map((item, index: number) => (
                     <Flex
                       justify="space-between"
                       key={index}
@@ -211,7 +219,11 @@ const PreviewSummary = ({
                     style={{ width: "100%", height: "100%" }}
                   >
                     <Text style={{ color: "var(--primary-color)" }}>
-                      {Number(standardBasePrice.toFixed(2)).toLocaleString()}.-
+                      {isTrial
+                        ? "0.-"
+                        : Number(
+                            standardBasePrice.toFixed(2)
+                          ).toLocaleString() + ".-"}
                     </Text>
                   </Flex>
                 </Col>
@@ -242,7 +254,7 @@ const PreviewSummary = ({
                   </Typography.Title>
                 </Col>
               </Row>
-              {selectedOptionalFeature.map((item, index) => (
+              {selectedOptionalFeature.map((item, index: number) => (
                 <Row key={index} style={{ borderInline: "1px solid #c6c8c9" }}>
                   <Col span={12} className="previewPackageCol">
                     <Flex justify="space-between">
@@ -258,7 +270,9 @@ const PreviewSummary = ({
                       style={{ width: "100%", height: "100%" }}
                     >
                       <Text style={{ color: "var(--primary-color)" }}>
-                        {item?.price
+                        {isTrial
+                          ? "0"
+                          : item?.price
                           ? Number(item.price).toLocaleString()
                           : "0"}
                         .-
@@ -326,9 +340,9 @@ const PreviewSummary = ({
           style={{ color: "var(--secondary-color)", margin: 0 }}
         >
           {isTrial
-            ? "Free"
+            ? "0.-"
             : total === 0
-            ? "00.00.-"
+            ? "0.-"
             : Number(total.toFixed(2)).toLocaleString() + ".-"}
         </Typography.Title>
       </Flex>

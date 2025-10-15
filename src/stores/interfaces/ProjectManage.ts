@@ -91,24 +91,6 @@ export interface DistrictDataTypes {
   wikiDataId?: string;
 }
 
-// export interface ProvinceDataThType {
-//   id?: number;
-//   name_en: string;
-//   name_th?: string;
-//   geography_id?: number;
-//   created_at?: string;
-//   updated_at?: string;
-//   deleted_at?: null;
-// }
-// export interface DistrictDataType {
-//   id?: number;
-//   name_th?: string;
-//   name_en: string;
-//   province_id?: number;
-//   created_at?: string;
-//   updated_at?: string;
-//   deleted_at?: null;
-// }
 export interface SubDistrictDataType {
   id: number;
   zip_code: number;
@@ -205,6 +187,7 @@ export interface ProjectFromDataType {
     nameEn?: string;
   };
 }
+
 export interface ProjectManagementParams {
   active?: boolean;
   status?: number[];
@@ -255,6 +238,28 @@ export interface ProjectManageType {
   };
   timeZone?: string;
   country?: string;
+  package?: string;
+  currentActivateFeature?: CurrentActivateFeature;
+  licenseId?: string;
+}
+
+export interface FeatureType {
+  id?: string;
+  name?: string;
+  sorted?: number;
+}
+
+export interface ActivatedFeature {
+  licenseId?: string;
+  featuresId?: string;
+  startDate?: string;
+  endDate?: string;
+  feature?: FeatureType;
+}
+
+export interface CurrentActivateFeature {
+  standard?: ActivatedFeature[];
+  optional?: ActivatedFeature[];
 }
 
 export interface ProjectManagementState {
@@ -327,6 +332,7 @@ export interface CreateInvoicePackageType {
   vatPercent: number;
   totalPriceWithVat: number;
   features: Feature[];
+  isTrial?: boolean;
 }
 
 export interface StepStatusType {
@@ -374,15 +380,6 @@ interface BankInfo {
   accountNo: string;
   accountName: string;
   bankLogo: string;
-}
-
-interface FeatureInfo {
-  price: number;
-  type: string;
-  isUserSelect: boolean;
-  feature: {
-    name: string;
-  };
 }
 export interface PreviewFeatureById {
   bank: BankInfo;
