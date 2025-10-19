@@ -15,30 +15,30 @@ const DeveloperNewsDetailModal = ({
   newsData,
 }: DeveloperNewsDetailModalProps) => {
   // Get status tag with time validation
- const getStatusTag = (record: DeveloperNewsType) => {
-     const now = dayjs();
-     const startDateTime = record.startTime
-       ? dayjs(`${record.startDate} ${record.startTime}`, "YYYY-MM-DD HH:mm")
-       : dayjs(record.startDate);
+  const getStatusTag = (record: DeveloperNewsType) => {
+    const now = dayjs();
+    const startDateTime = record.startTime
+      ? dayjs(`${record.startDate} ${record.startTime}`, "YYYY-MM-DD HH:mm")
+      : dayjs(record.startDate);
 
-     const endDateTime = record.endTime
-       ? dayjs(`${record.endDate} ${record.endTime}`, "YYYY-MM-DD HH:mm")
-       : dayjs(record.endDate).endOf("day"); // ถ้าไม่มี endTime ให้เป็น 23:59:59
+    const endDateTime = record.endTime
+      ? dayjs(`${record.endDate} ${record.endTime}`, "YYYY-MM-DD HH:mm")
+      : dayjs(record.endDate).endOf("day"); // ถ้าไม่มี endTime ให้เป็น 23:59:59
 
-     if (!record.active || !record.isPublish) {
-       return <Tag color="red">Inactive</Tag>;
-     }
+    if (!record.active || !record.isPublish) {
+      return <Tag color="red">Inactive</Tag>;
+    }
 
-     if (now.isBefore(startDateTime)) {
-       return <Tag color="blue">Scheduled</Tag>;
-     }
+    if (now.isBefore(startDateTime)) {
+      return <Tag color="blue">Scheduled</Tag>;
+    }
 
-     if (now.isAfter(endDateTime)) {
-       return <Tag color="gray">Expired</Tag>;
-     }
+    if (now.isAfter(endDateTime)) {
+      return <Tag color="gray">Expired</Tag>;
+    }
 
-     return <Tag color="green">Activated</Tag>;
-   };
+    return <Tag color="green">Activated</Tag>;
+  };
 
   // Get creator name from API data
   const getCreatorName = (record: DeveloperNewsType) => {
@@ -107,6 +107,29 @@ const DeveloperNewsDetailModal = ({
       </Space>
     );
   };
+
+const IS_BACKEND_UTC_RAW = true;
+// true = backend เก็บเป็น UTC ตรง ๆ (ไม่แปลงให้)
+// false = backend รับ local แล้วแปลงเป็น UTC ให้เอง
+
+const TZ = 7;
+
+// ส่งค่าไป backend
+const toBackend = (date: string, time: string) => {
+  const d = dayjs(`${date} ${time}`, "YYYY-MM-DD HH:mm");
+  return IS_BACKEND_UTC_RAW
+    ? d.subtract(TZ, "hour").toISOString()
+    : d.toISOString();
+};
+
+// แสดงผลใน UI จากค่า UTC/ISO ที่อ่านมา
+const fromBackend = (isoOrDateStr?: string) => {
+  if (!isoOrDateStr) return "-";
+  const d = dayjs(isoOrDateStr);
+  const local = d.add(TZ, "hour"); // แปลง UTC -> Local
+  return local.format("DD/MM/YY HH:mm");
+};
+
 
   const handleClose = () => {
     onClose();
@@ -342,14 +365,16 @@ const DeveloperNewsDetailModal = ({
                     }}>
                     Start date
                   </h4>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      color: "#374151",
-                      margin: 0,
-                    }}>
+                  <p>
                     {newsData.startDate
-                      ? dayjs(newsData.startDate).format("DD/MM/YY hh:mm A")
+                      ? dayjs(
+                          `${newsData.startDate} ${
+                            newsData.startTime || "00:00"
+                          }`,
+                          "YYYY-MM-DD HH:mm"
+                        )
+                          .add(0, "hour") // ถ้าอ่านมาจาก UTC
+                          .format("DD/MM/YY HH:mm")
                       : "-"}
                   </p>
                 </div>
@@ -366,14 +391,16 @@ const DeveloperNewsDetailModal = ({
                     }}>
                     End date
                   </h4>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      color: "#374151",
-                      margin: 0,
-                    }}>
+                  <p>
                     {newsData.endDate
-                      ? dayjs(newsData.endDate).format("DD/MM/YY hh:mm A")
+                      ? dayjs(
+                          `${newsData.endDate} ${
+                            newsData.endTime || "00:00"
+                          }`,
+                          "YYYY-MM-DD HH:mm"
+                        )
+                          .add(0, "hour") // ถ้าอ่านมาจาก UTC
+                          .format("DD/MM/YY HH:mm")
                       : "-"}
                   </p>
                 </div>

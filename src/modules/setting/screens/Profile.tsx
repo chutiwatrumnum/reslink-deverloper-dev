@@ -16,11 +16,15 @@ import type { FormInstance } from "antd/es/form";
 
 import "../styles/setting.css";
 import { whiteLabel } from "../../../configs/theme";
-import { EditDataProfile, getDataProfile } from "../service/api/profile_api";
-import { editProfileDetail } from "../../../stores/interfaces/Profile";
+import {
+  getDataProfile,
+  updateProfile,
+  UpdateProfilePayload,
+} from "../service/api/profile_api";
 import FailedModal from "../../../components/common/FailedModal";
 import SuccessModal from "../../../components/common/SuccessModal";
 import { UpdateProfileSuccessMessage } from "../constants/profile";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 
 const { Text } = Typography;
 
@@ -32,6 +36,8 @@ const Profile = () => {
   const [dataProfileDetail, setDataProfileDetail] = useState<any>(null);
   const [edited, setEdited] = useState<boolean>(true);
   const [reRender, setReRender] = useState<boolean>(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] =
+    useState(false);
 
   const permissions = useSelector(
     (state: RootState) => state.common?.permission
@@ -43,7 +49,12 @@ const Profile = () => {
       const result = await getDataProfile();
       if (result?.status) {
         await setPreviewImage(result.data.imageProfile);
-        await ProfileEditForm.setFieldsValue({ ...result.data });
+        await ProfileEditForm.setFieldsValue({
+          ...result.data,
+          givenName: result.data.firstName,
+          familyName: result.data.lastName,
+          middleName: result.data.middleName || "",
+        });
         await setDataProfileDetail(result.data);
       }
     })();
@@ -51,25 +62,35 @@ const Profile = () => {
 
   // functions
   const onFinish = async (values: any) => {
-    const request: editProfileDetail = {
-      contact: values.contact,
-    };
-    if (values.image !== dataProfileDetail.profileImage) {
-      request.imageProfile = values.image;
-    }
+    try {
+      // เตรียมข้อมูลสำหรับ API ใหม่
+      const profileUpdatePayload: UpdateProfilePayload = {
+        givenName: values.givenName,
+        middleName: values.middleName || null,
+        familyName: values.familyName,
+        contact: values.contact || "",
+      };
 
-    const resultCreated = await EditDataProfile(request);
-    if (resultCreated) {
+      // เรียกใช้ API ใหม่
+      const updateResult = await updateProfile(profileUpdatePayload);
+
+      if (!updateResult.status) {
+        FailedModal(updateResult.error || "Failed to update profile");
+        return;
+      }
+
+      // แสดงข้อความสำเร็จและรีเฟรชข้อมูล
       SuccessModal(UpdateProfileSuccessMessage);
       await setEdited(true);
-      await setReRender(true);
-    } else {
-      FailedModal("failed upload");
+      await setReRender(!reRender);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      FailedModal("Failed to update profile");
     }
   };
 
   const onFinishFailed = (errorInfo: object) => {
-    console.log("Failed:", errorInfo);
+    // Form validation failed
   };
 
   const onEdit = async () => {
@@ -79,13 +100,29 @@ const Profile = () => {
       await onCancel();
     }
   };
+
   const onCancel = async () => {
     setEdited(true);
     setPreviewImage(dataProfileDetail.imageProfile);
-    ProfileEditForm.setFieldsValue({ ...dataProfileDetail });
+    ProfileEditForm.setFieldsValue({
+      ...dataProfileDetail,
+      givenName: dataProfileDetail.firstName,
+      familyName: dataProfileDetail.lastName,
+      middleName: dataProfileDetail.middleName || "",
+    });
   };
+
   const onImageChanged = (image: string) => {
     setPreviewImage(image);
+    ProfileEditForm.setFieldValue("image", image);
+  };
+
+  const handleChangePasswordClick = () => {
+    setIsChangePasswordModalOpen(true);
+  };
+
+  const handleChangePasswordClose = () => {
+    setIsChangePasswordModalOpen(false);
   };
 
   return (
@@ -95,16 +132,17 @@ const Profile = () => {
         <Form
           name="recovery"
           form={ProfileEditForm}
-          className="formChangePassword"
+          className="formProfile"
           layout="vertical"
           initialValues={{ remember: true }}
           onFinish={onFinish}
           onFinishFailed={onFinishFailed}
           autoComplete="off">
+          {/* Profile Image Section */}
           <div className="imageProfileContainer">
             <div style={{ position: "relative" }}>
               <Avatar
-                size={225}
+                size={180}
                 className="profileImage"
                 src={previewImage}
                 icon={
@@ -119,137 +157,161 @@ const Profile = () => {
               </Form.Item>
             </div>
           </div>
-          <div className="profileFormContainer">
-            <div className="profileFormColumn">
-              <Form.Item
-                label={
-                  <Text className="textColor semiBoldText">First name</Text>
-                }
-                name="firstName">
-                <Input
-                  disabled={true}
-                  size="large"
-                  placeholder="Please input Name"
-                  maxLength={120}
-                />
-              </Form.Item>
 
-              <Row justify="space-between">
+          {/* Form Fields Section */}
+          <div className="profileFormContainer">
+            {/* Row 1: First Name, Middle Name, Last Name */}
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <Text className="textColor semiBoldText">First name</Text>
+                  }
+                  name="givenName"
+                  rules={[
+                    { required: true, message: "Please input first name" },
+                  ]}>
+                  <Input
+                    disabled={edited}
+                    size="large"
+                    placeholder="Please input first name"
+                    maxLength={120}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <Text className="textColor semiBoldText">Middle name</Text>
+                  }
+                  name="middleName">
+                  <Input
+                    disabled={edited}
+                    size="large"
+                    placeholder="Middle name (optional)"
+                    maxLength={120}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <Text className="textColor semiBoldText">Last name</Text>
+                  }
+                  name="familyName"
+                  rules={[
+                    { required: true, message: "Please input last name" },
+                  ]}>
+                  <Input
+                    disabled={edited}
+                    size="large"
+                    placeholder="Please input last name"
+                    maxLength={120}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {/* Row 2: Mobile No., Email, Role */}
+            <Row gutter={16}>
+              <Col span={8}>
                 <Form.Item
                   label={
                     <Text className="textColor semiBoldText">Mobile no.</Text>
                   }
                   name="contact"
-                  style={{ width: "100%" }}>
+                  rules={telRule}>
                   <Input
-                    disabled={true}
+                    disabled={edited}
                     size="large"
                     placeholder="Please input tel"
                     maxLength={10}
                     showCount
                   />
                 </Form.Item>
-              </Row>
-            </div>
-
-            <div className="profileFormColumn">
-              <Form.Item
-                label={
-                  <Text className="textColor semiBoldText">Last name</Text>
-                }
-                name="lastName">
-                <Input
-                  disabled={true}
-                  size="large"
-                  placeholder="Please input actual name"
-                  maxLength={120}
-                />
-              </Form.Item>
-              <Form.Item
-                label={<Text className="textColor semiBoldText">Email</Text>}
-                name="email"
-                // rules={emailRule}
-              >
-                <Input
-                  disabled={true}
-                  size="large"
-                  placeholder="Please input email"
-                  maxLength={120}
-                />
-              </Form.Item>
-            </div>
-            <div className="profileFormColumn">
-              <Row justify="space-between">
-                {/* <Form.Item
-                  label={
-                    <Text className="textColor semiBoldText">Middle name</Text>
-                  }
-                  name="middleName"
-                  style={{ width: "100%" }}
-                >
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label={<Text className="textColor semiBoldText">Email</Text>}
+                  name="email">
                   <Input
                     disabled={true}
                     size="large"
-                    placeholder="Please input Name"
+                    placeholder="Please input email"
                     maxLength={120}
                   />
-                </Form.Item> */}
+                </Form.Item>
+              </Col>
+              <Col span={8}>
                 <Form.Item
                   label={<Text className="textColor semiBoldText">Role</Text>}
-                  name="roleName"
-                  style={{ width: "100%" }}>
+                  name="roleName">
                   <Input
                     disabled={true}
                     size="large"
                     placeholder="Select role"
-                    maxLength={20}
+                    maxLength={120}
                   />
                 </Form.Item>
+              </Col>
+            </Row>
+
+            {/* Row 3: Project Name */}
+            <Row gutter={16}>
+              <Col span={8}>
                 <Form.Item
                   label={
-                    <Text className="textColor semiBoldText">
-                      Developer Name
-                    </Text>
+                    <Text className="textColor semiBoldText">Developer Name</Text>
                   }
-                  name="developerName"
-                  style={{ width: "100%" }}>
+                  name="developerName">
                   <Input
                     disabled={true}
                     size="large"
-                    placeholder="Select role"
-                    maxLength={20}
+                    placeholder="Developer name"
+                    maxLength={120}
                   />
                 </Form.Item>
-              </Row>
-            </div>
+              </Col>
+            </Row>
           </div>
-          <Form.Item className="changePasswordBottomBtnContainer">
-            <Row>
-              <Col
-                span={12}
-                style={{
-                  justifyContent: "end",
-                  display: "flex",
-                  paddingRight: "10px",
-                }}>
+
+          {/* Action Buttons */}
+          <Form.Item className="profileActionButtons">
+            <Row gutter={16} justify="center">
+              <Col>
                 <MediumActionButton
                   type="default"
                   className="ProfileButton"
-                  message={edited == true ? "Edit" : "Cancel"}
+                  message={edited ? "Edit" : "Cancel"}
                   onClick={onEdit}
                   // disabled={!access("profile", "edit")}
                 />
               </Col>
-              <Col span={12} style={{ paddingLeft: "10px" }}>
+              <Col>
+                <MediumActionButton
+                  type="default"
+                  className="ProfileButton"
+                  message="Change password"
+                  onClick={handleChangePasswordClick}
+                />
+              </Col>
+              <Col>
                 <MediumButton
                   // disabled={edited || !access("profile", "edit")}
-                  className="forgotButton"
+                  className="ProfileSaveButton"
                   message="Save"
+                  form={ProfileEditForm}
                 />
               </Col>
             </Row>
           </Form.Item>
         </Form>
+
+        {/* Change Password Modal */}
+        <ChangePasswordModal
+          isOpen={isChangePasswordModalOpen}
+          onClose={handleChangePasswordClose}
+        />
       </div>
     </>
   );

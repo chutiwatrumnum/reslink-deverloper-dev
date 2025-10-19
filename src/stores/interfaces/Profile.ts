@@ -4,6 +4,7 @@ export interface ProfileDetail {
     lastName: string;
     firstName: string;
     nickName: string;
+    middleName?: string; 
     email: string;
     imageProfile: string | null;
     contact: string;
